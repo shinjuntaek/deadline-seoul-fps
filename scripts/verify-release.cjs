@@ -52,7 +52,7 @@ test('Five balanced waves and no duplicate brute boss',()=>{
 test('Enemies have GPU resource disposal and audio uses a reusable buffer pool',()=>{
   assert(js.includes('function disposeEnemyGroup(z){'));
   assert(js.includes('geometries.forEach(g=>g.dispose'));
-  assert(js.includes('disposeEnemyGroup(z);return false'));
+  assert(js.includes('if(t>=ZOMBIE_DEATH_END){\n  disposeEnemyGroup(z);\n  return false;'));
   assert(js.includes('this.noiseCache=new Map()'));
 });
 test('AI textures are local WebP and fit 750 KB budget',()=>{
@@ -195,6 +195,28 @@ test('Photo cutouts are unoccluded only when loaded, while 3D hit geometry remai
   assert(art[n].solidPercent>=4&&art[n].solidPercent<=92,
     'Bad green-screen transparency: '+n+' '+JSON.stringify(art[n]));
  }
+});
+
+test('Animated photo zombie deaths clearly stagger, fall, persist prone and fade',()=>{
+ for(const mark of [
+  'function beginZombieDeath(z,head=false){',
+  'function updateZombieDeath(z,dt){',
+  "z.deathPhase=t<ZOMBIE_DEATH_STAGGER?'stagger':",
+  's.rotation.z=z.deathSide*(jerk*.16+fall*1.35);',
+  'z.deadCorpse.material.opacity=Math.max(0,.81*show*(1-fade));',
+  'return updateZombieDeath(z,dt);',
+  'const corpse=new THREE.Mesh(new THREE.PlaneGeometry(wide,long),m);',
+  "corpse.rotation.x=-Math.PI/2;",
+  'function notifyZombieKill(z,head=false){',
+  'function zombieHitReaction(z,dt){',
+  'if(!expected.has(id)){beginZombieDeath(z,false)',
+  "if(coop.deathCorpses)for(let i=coop.deathCorpses.length-1;i>=0;i--)",
+  'const oldest=coop.deathCorpses.shift();coopDisposeZombie(oldest)',
+ ]){
+  assert(js.includes(mark),'Missing zombie death behavior '+mark);
+ }
+ assert(js.includes('if(z.dead)return false;'),'Dead enemies must remain non-targetable');
+ assert(js.includes('if(!z.dead)a.push(z.group)'),'Dead enemies excluded from raycast');
 });
 
 const report={game:'DEADLINE: SEOUL',kind:'static regression verification',passed:tests.length,checks:tests,waves,

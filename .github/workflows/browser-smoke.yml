@@ -2,7 +2,7 @@ name: DEADLINE SEOUL browser smoke QA
 on:
   workflow_dispatch:
   push:
-    branches: [feat/scarier-faster-infected-20261111, fix/curb-and-zombie-realism-20261111]
+    branches: [feat/scarier-faster-infected-20261111, fix/curb-and-zombie-realism-20261111, feat/infected-death-motion-20261111]
     paths:
       - "scripts/**"
       - "multiplayer/**"
