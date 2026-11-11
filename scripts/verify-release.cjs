@@ -126,6 +126,21 @@ test('Zombie pursuit speeds and nearby rush are higher while 194 enemies remain'
   assert.deepEqual(waves.map(w=>w.walkers+w.runners+w.brutes),[14,24,36,50,70]);
 });
 
+test('Seoul scene uses wet road PBR material, normal and roughness maps',()=>{
+ assert(js.includes('function envPbrCanvas('));
+ assert(js.includes('ground.material.normalMap=envRoadTex.normalMap;'));
+ assert(js.includes('ground.material.roughnessMap=envRoadTex.roughnessMap;'));
+ assert(js.includes('concrete.normalMap=sidewalk.normalMap;'));
+});
+test('Realistic facade, car and street furniture detail is quality-gated',()=>{
+ for(const name of ['envDetailCar(g,broken)','envCityBus(-14.9,-45)','envBusStop(-16.5,12)','envWarningTex()','envManhole(x,z)','envObjMetrics','new THREE.InstancedMesh']){
+  assert(js.includes(name),'Missing detailed city environment '+name);
+ }
+ assert(js.includes("const envDetail=ultraLow?0:quality==='low'?1:quality==='medium'?2:3;"));
+ assert(js.includes('if(envDetail>=2){'));
+ assert(js.includes('addCollider(x,z,2.85,8.25,2.8'));
+});
+
 const report={game:'DEADLINE: SEOUL',kind:'static regression verification',passed:tests.length,checks:tests,waves,
  knownLimitations:[
   'Full 5-wave playthrough and extraction ending not yet observed in real browser',
