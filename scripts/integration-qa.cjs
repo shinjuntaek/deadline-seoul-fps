@@ -56,7 +56,7 @@ const inject=[
 "  shoot(performance.now()+2000);",
 "  check('Live shoot raycasts against enemy body',target.hp<firstHP,{hpBefore:firstHP,hpAfter:target.hp,hits:stats.hits});",
 "  target.horrorCooldown=0;target.horrorRush=0;",
-"  target.group.position.set(camera.position.x,0,camera.position.z+6);",
+"  target.group.position.set(camera.position.x,0,camera.position.z-6); // unobstructed road, away from barricade at z=34",
 "  const beforeChaseZ=target.group.position.z;",
 "  updateEnemy(target,.05);",
 "  check('Zombie performs close-range rush',target.horrorRush>0,{rush:target.horrorRush});",
