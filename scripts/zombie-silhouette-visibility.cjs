@@ -39,13 +39,11 @@ patch('for(const z of coop.enemyMeshes.values()){\n  z.group.position.lerp(',
  'apply texture to co-op client too');
 patch('function applyPhotographicZombieSkin(z){',
  [
- "if(new URLSearchParams(location.search).get('qa')==='1'){",
  " window.__DEADLINE_ZOMBIE_ART__=()=>({",
  "  total:enemies.filter(z=>!z.dead).length,",
  "  photoActive:enemies.filter(z=>!z.dead&&z.photographicActive).length,",
  "  photoPending:enemies.filter(z=>!z.dead&&z.photoSprite&&!z.photographicActive).length",
  " });",
- "}",
  'function applyPhotographicZombieSkin(z){'
  ].join('\n'),
  'read-only sprite QA state');
