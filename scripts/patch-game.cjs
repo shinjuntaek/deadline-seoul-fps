@@ -66,6 +66,70 @@ js=insertOnce(js,'const scene=new THREE.Scene();','\n'+preload+'\n','3D scene');
 const enemyParts=js.split('const z={id:enemyId++');
 if(enemyParts.length!==2)throw new Error('Enemy geometry marker mismatch');
 js=enemyParts[0]+'\n'+charArt+'\nconst z={id:enemyId++'+enemyParts[1];
+
+/* Runtime and interaction fixes discovered during actual browser Preview QA. */
+function replaceExact(source,original,replacement,label){
+  const parts=source.split(original);
+  if(parts.length!==2)throw new Error('Unsafe '+label+' source patch: marker occurrences='+ (parts.length-1));
+  return parts.join(replacement);
+}
+js=replaceExact(
+  js,
+  "dom.start.addEventListener('click',()=>{audio.resume();if(localStorage.getItem('deadline-seoul-tutorial')!=='1'){phase='tutorial';dom.tutorial.classList.remove('hidden');localStorage.setItem('deadline-seoul-tutorial','1')}else startRun()});",
+  "dom.start.addEventListener('click',()=>{if(phase!=='menu')return;startRun();showCenter('WASD 이동 · 클릭 사격 · R 재장전',3.3)});",
+  'start button / remove unnecessary first-launch blocking modal'
+);
+js=replaceExact(
+  js,
+  "addEventListener('keydown',e=>{keys.add(e.code);",
+  "addEventListener('keydown',e=>{if(e.code==='Enter'&&phase==='menu'&&document.activeElement!==dom.start){e.preventDefault();dom.start.click();return}keys.add(e.code);",
+  'ENTER key in menu'
+);
+js=replaceExact(
+  js,
+  "function startRun(){resetRun();phase='playing';",
+  "function startRun(){seenLock=false;resetRun();phase='playing';",
+  'new game pointer lock guard'
+);
+js=replaceExact(
+  js,
+  "document.addEventListener('pointerlockchange',()=>{if(!coarse&&phase==='playing'&&document.pointerLockElement!==dom.game)pauseGame(false)});",
+  "let seenLock=false;document.addEventListener('pointerlockchange',()=>{if(document.pointerLockElement===dom.game){seenLock=true;return}if(!coarse&&seenLock&&phase==='playing'){seenLock=false;pauseGame(false)}});",
+  'don't auto-pause on initially denied pointer lock'
+);
+const badLock="if(!coarse)dom.game.requestPointerLock().catch(()=>{})";
+if(js.split(badLock).length!==3)throw new Error('Expected two original pointer lock calls');
+const safeLock="if(!coarse&&typeof dom.game.requestPointerLock==='function')try{const p=dom.game.requestPointerLock();if(p&&typeof p.catch==='function')p.catch(()=>{if(phase==='playing')showCenter('화면을 클릭해 마우스 조준을 활성화하세요',2)})}catch(e){console.warn('Pointer lock unavailable',e)}";
+js=js.split(badLock).join(safeLock);
+js=replaceExact(
+  js,
+  "beginWave(0);audio.resume();",
+  "beginWave(0);try{audio.resume()}catch(e){console.warn('Audio unavailable',e)}",
+  'audio failure should not block gameplay'
+);
+const qaScript=[
+  "/* Read-only QA diagnostics for Preview smoke tests. */",
+  "const qaEnabled=new URLSearchParams(location.search).get('qa')==='1';",
+  "let qaOutput=null,qaLastUpdate=-1;",
+  "if(qaEnabled){",
+  "qaOutput=document.createElement('output');",
+  "qaOutput.id='deadline-qa-status';",
+  "qaOutput.setAttribute('aria-live','off');",
+  "Object.assign(qaOutput.style,{position:'fixed',left:'12px',bottom:'9px',zIndex:'240',background:'rgba(3,9,9,.90)',color:'#b7ffcc',padding:'6px 12px',border:'1px solid #447d67',font:'12px monospace',pointerEvents:'none',maxWidth:'calc(100vw - 24px)'});",
+  "document.body.appendChild(qaOutput);",
+  "window.__DEADLINE_QA__=()=>({phase,wave:stats.wave,ammo:weaponState[currentWeapon].ammo,kills:stats.kills,score:stats.score,pointerLocked:document.pointerLockElement===dom.game});",
+  "}",
+].join('\n');
+js=replaceExact(js,'function frame(){',qaScript+'\nfunction frame(){','QA instrumentation before main loop');
+js=replaceExact(js,' updateFX(dt);fpsTime+=dt;fpsFrames++;'," updateFX(dt);fpsTime+=dt;fpsFrames++;if(qaOutput&&elapsed-qaLastUpdate>.5){qaLastUpdate=elapsed;qaOutput.textContent='QA '+phase.toUpperCase()+' · WAVE '+stats.wave+' · AMMO '+weaponState[currentWeapon].ammo+' · KILLS '+stats.kills+' · '+Math.round(1/Math.max(dt,.0001))+' FPS';}",'QA FPS and state HUD');
+const styleFix=[
+  '#menu .actions {position:relative;z-index:5;pointer-events:auto}',
+  '#menu .actions button {pointer-events:auto;touch-action:manipulation}',
+  '#tutorial {z-index:60}',
+].join('\n');
+fs.appendFileSync(cssPath,'\n/* Tested menu interaction fixes */\n'+styleFix+'\n');
+css=fs.readFileSync(cssPath,'utf8');
+
 fs.writeFileSync(jsPath,js);
 cp.execFileSync(process.execPath,['--check',jsPath]);
 for(const name of ['hero','stalker','runner','brute','decals']){
@@ -80,7 +144,7 @@ const report={
   renderer:'Three.js r164 self-hosted ESM',
   characterVisuals:'camera-facing transparent art over 3D gameplay hitboxes',
   jsBytes:Buffer.byteLength(js),htmlBytes:Buffer.byteLength(html),cssBytes:Buffer.byteLength(css),
-  checks:{syntax:true,hero:true,characterSprites:true,decals:true,obsoleteUmdRemoved:true}
+  checks:{syntax:true,hero:true,characterSprites:true,decals:true,obsoleteUmdRemoved:true,startButton:true,keyboardEnter:true,pointerLockFallback:true,qaDiagnostic:true}
 };
 fs.writeFileSync(path.join(dist,'qa-report.json'),JSON.stringify(report,null,2)+'\n');
 console.log('GAME_VISUAL_QA_OK',JSON.stringify(report));
