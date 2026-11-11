@@ -197,6 +197,28 @@ test('Photo cutouts are unoccluded only when loaded, while 3D hit geometry remai
  }
 });
 
+test('Animated photo zombie deaths clearly stagger, fall, persist prone and fade',()=>{
+ for(const mark of [
+  'function beginZombieDeath(z,head=false){',
+  'function updateZombieDeath(z,dt){',
+  "z.deathPhase=t<ZOMBIE_DEATH_STAGGER?'stagger':",
+  's.rotation.z=z.deathSide*(jerk*.16+fall*1.35);',
+  'z.deadCorpse.material.opacity=Math.max(0,.81*show*(1-fade));',
+  'return updateZombieDeath(z,dt);',
+  'const corpse=new THREE.Mesh(new THREE.PlaneGeometry(wide,long),m);',
+  "corpse.rotation.x=-Math.PI/2;",
+  'function notifyZombieKill(z,head=false){',
+  'function zombieHitReaction(z,dt){',
+  'if(!expected.has(id)){beginZombieDeath(z,false)',
+  "if(coop.deathCorpses)for(let i=coop.deathCorpses.length-1;i>=0;i--)",
+  'const oldest=coop.deathCorpses.shift();coopDisposeZombie(oldest)',
+ ]){
+  assert(js.includes(mark),'Missing zombie death behavior '+mark);
+ }
+ assert(js.includes('if(z.dead)return false;'),'Dead enemies must remain non-targetable');
+ assert(js.includes('if(!z.dead)a.push(z.group)'),'Dead enemies excluded from raycast');
+});
+
 const report={game:'DEADLINE: SEOUL',kind:'static regression verification',passed:tests.length,checks:tests,waves,
  knownLimitations:[
   'Full 5-wave playthrough and extraction ending not yet observed in real browser',
