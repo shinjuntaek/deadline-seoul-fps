@@ -5,7 +5,7 @@
   "scripts": {
     "build": "npm run test:coop && node scripts/recover-release.cjs && node scripts/prepare-assets.cjs && node scripts/patch-game.cjs && node scripts/graphics-upgrade.cjs && node scripts/perf-adaptive.cjs && node scripts/environment-realism.cjs && node scripts/environment-props.cjs && node scripts/dense-waves.cjs && node scripts/enemy-speed.cjs && node scripts/integration-qa.cjs && node scripts/coop-client.cjs && node scripts/verify-release.cjs && node scripts/build-og-image.cjs",
     "test": "npm run build",
-    "test:coop": "node --test multiplayer/coop-engine.test.mjs"
+    "test:coop": "node --test multiplayer/coop-engine.test.mjs multiplayer/coop-ws.test.mjs"
   },
   "dependencies": {
     "three": "0.164.1",
