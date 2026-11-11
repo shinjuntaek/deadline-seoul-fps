@@ -42,10 +42,12 @@ const waves=[...waveSpec[1].matchAll(/walkers:(\d+),runners:(\d+),brutes:(\d+),i
  .map(x=>({walkers:+x[1],runners:+x[2],brutes:+x[3],label:x[4]}));
 test('Five balanced waves and no duplicate brute boss',()=>{
   assert.equal(waves.length,5);
-  assert.deepEqual(waves.map(w=>w.walkers+w.runners+w.brutes),[7,11,15,20,24]);
-  assert.deepEqual(waves.map(w=>w.brutes),[0,0,0,1,1]);
+  assert.deepEqual(waves.map(w=>w.walkers+w.runners+w.brutes),[14,24,36,50,70]);
+  assert.deepEqual(waves.map(w=>w.brutes),[0,0,0,1,2]);
   assert(!js.includes("if(p.brutes)spawnQueue.push('brute');"));
   assert(js.includes("for(let n=0;n<p.brutes;n++)spawnQueue.push('brute');"));
+  assert(js.includes("const maxAlive=ultraLow?7:quality==='low'?11:quality==='medium'?17:24;"));
+  assert(js.includes("if(live>=maxAlive)return;"));
 });
 test('Enemies have GPU resource disposal and audio uses a reusable buffer pool',()=>{
   assert(js.includes('function disposeEnemyGroup(z){'));
