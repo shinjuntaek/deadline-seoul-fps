@@ -1,8 +1,12 @@
 {
   "name": "deadline-seoul-zombie-fps",
   "private": true,
-  "version": "1.0.0-rc.2",
+  "version": "1.0.0-rc.3",
   "scripts": {
-    "build": "rm -rf dist .release && mkdir -p dist .release && for f in release/lean.b64.part-*; do echo Decoding $f; base64 -d $f >> .release/release.tar.gz; done && tar -xzf .release/release.tar.gz -C dist"
+    "build": "node scripts/recover-release.cjs",
+    "test": "npm run build && node --check dist/game.js"
+  },
+  "engines": {
+    "node": ">=20"
   }
 }
