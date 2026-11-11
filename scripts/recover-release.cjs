@@ -57,6 +57,12 @@ const removedUmd='<script src="https://cdn.jsdelivr.net/npm/three@0.164.1/build/
 if(!revisedHtml.includes(removedUmd))
   throw new Error('Expected removed Three.js UMD script not found; review upstream archive before patch.');
 revisedHtml=revisedHtml.replace(removedUmd,'<script type="module">import * as THREE from "/vendor/three.module.js"; window.THREE=THREE;</script>');
+
+/* The old inline CDN fallback races ESM imports and fetches the removed UMD. */
+const brokenFallback=/<script>\s*if\s*\(!window\.THREE\)\s*\{[\s\S]*?<\/script>\s*/;
+if(!brokenFallback.test(revisedHtml)) throw new Error('Original obsolete fallback marker not found');
+revisedHtml=revisedHtml.replace(brokenFallback,'');
+
 const manifest=JSON.parse(fs.readFileSync(path.join(root,'assets','bbanana-manifest.json'),'utf8'));
 const hero=manifest.assets.hero.url;
 if(!hero.startsWith('https://')) throw new Error('Invalid hero asset origin');
