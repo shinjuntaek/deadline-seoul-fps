@@ -168,6 +168,21 @@ test('Nightmare pursuit is bounded with horror animation, synth groans and co-op
  assert(js.includes("Math.min(p.speed*1.7,p.speed*(1+surge*proximity)*rush)"),'Movement capped for stability');
 });
 
+test('Checkpoint has a clear central lane and passable curbs',()=>{
+ assert(js.includes("curb,false,'curb'"),'Sidewalk must not be a solid wall');
+ assert(!js.includes("curb,true,'curb'"),'Old curb collision still exists');
+ assert(js.includes('if(Math.abs(i)!==3)continue;const b=box('),'Checkpoint blocks must be on roadside');
+ assert(js.includes('if(Math.abs(i)!==3)continue;'),'Warning decals follow new roadside checkpoint');
+});
+test('Actual BBANANA zombies appear in front of opaque geometry with 3D raycasting retained',()=>{
+ assert(js.includes("const aiSkin=AI_TEXTURES[kind];let photoSprite=null;"));
+ assert(js.includes("art.position.set(0,.025,kind==='brute'?-.92:-.79);"));
+ assert(js.includes('z.photoSprite=photoSprite;'));
+ assert(js.includes("map:aiSkin,color:0xffffff"));
+ assert(js.includes('const zombieGrime='));
+ assert(js.includes("torso.userData={enemy:z,part:'body'}"),'Do not discard original hitboxes');
+});
+
 const report={game:'DEADLINE: SEOUL',kind:'static regression verification',passed:tests.length,checks:tests,waves,
  knownLimitations:[
   'Full 5-wave playthrough and extraction ending not yet observed in real browser',
