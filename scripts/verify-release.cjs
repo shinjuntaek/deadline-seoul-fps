@@ -141,6 +141,12 @@ test('Realistic facade, car and street furniture detail is quality-gated',()=>{
  assert(js.includes('addCollider(x,z,2.85,8.25,2.8'));
 });
 
+test('Software WebGL skips additional road PBR to preserve baseline FPS',()=>{
+ assert(js.includes("if(envDetail>=1){\n const envRoadTex="));
+ assert(js.includes("const envDetail=ultraLow?0:quality==='low'?1:quality==='medium'?2:3;"));
+ assert(js.includes('if(envDetail>=2){\n envCityBus(-14.9,-45);'));
+});
+
 const report={game:'DEADLINE: SEOUL',kind:'static regression verification',passed:tests.length,checks:tests,waves,
  knownLimitations:[
   'Full 5-wave playthrough and extraction ending not yet observed in real browser',
