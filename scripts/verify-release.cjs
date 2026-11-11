@@ -147,6 +147,19 @@ test('Software WebGL skips additional road PBR to preserve baseline FPS',()=>{
  assert(js.includes('if(envDetail>=2){\n envCityBus(-14.9,-45);'));
 });
 
+test('Co-op lobby, server-authoritative shooting and teammate rendering are wired',()=>{
+ assert(js.includes('function coopStartUI(){'));
+ assert(js.includes('function coopApplySnapshot(state){'));
+ assert(js.includes('function coopFrame(dt,now){'));
+ assert(js.includes('function coopShoot(now){'));
+ assert(js.includes('function coopReload(){'));
+ assert(js.includes('if(coop.active){coopFrame(dt,now);updateHUD();'));
+ assert(js.includes("if(coop.active)return;"));
+ assert(js.includes('roomParam'));
+ assert(fs.existsSync(path.join(root,'api','multiplayer.js')));
+ assert(fs.existsSync(path.join(root,'multiplayer','coop-engine.mjs')));
+});
+
 const report={game:'DEADLINE: SEOUL',kind:'static regression verification',passed:tests.length,checks:tests,waves,
  knownLimitations:[
   'Full 5-wave playthrough and extraction ending not yet observed in real browser',
