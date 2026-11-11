@@ -103,7 +103,7 @@ test('No standing teammates results in shared defeat',()=>{
  assert.equal(room.phase,'defeat');
 });
 test('Snapshot, disconnection and resume token use bounded public fields',()=>{
- const {room,members,go}=setup();
+ const {room,members,go}=setup();go();
  const p=room.players.get(members[0].playerId);
  const token=p.token;
  room.remove(members[0].clientId);
