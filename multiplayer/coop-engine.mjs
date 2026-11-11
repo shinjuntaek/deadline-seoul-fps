@@ -12,9 +12,9 @@ export const WAVE_CONFIG=Object.freeze([
  {walker:40,runner:28,brute:2,interval:.34},
 ]);
 export const ENEMY_PROFILE=Object.freeze({
- walker:{hp:108,speed:1.65,damage:9,range:1.35,cool:.88,score:100,radius:.36},
- runner:{hp:74,speed:3.45,damage:7,range:1.28,cool:.62,score:135,radius:.30},
- brute:{hp:840,speed:1.08,damage:23,range:1.9,cool:1.15,score:900,radius:.72},
+ walker:{hp:108,speed:2.25,damage:9,range:1.35,cool:.88,score:100,radius:.36},
+ runner:{hp:74,speed:4.9,damage:7,range:1.28,cool:.62,score:135,radius:.30},
+ brute:{hp:840,speed:1.55,damage:23,range:1.9,cool:1.15,score:900,radius:.72},
 });
 export const WEAPON_CONFIG=Object.freeze({
  rifle:{ammo:30,reserve:180,damage:32,rpm:720,range:95,reload:1550,pellets:1},
@@ -155,7 +155,7 @@ export class CoopRoom {
   const source=(pool.length?pool:SPAWN_POINTS)[Math.floor(this.rng()*(pool.length?pool:SPAWN_POINTS).length)];
   let x=source[0]+(this.rng()-.5)*3,z=source[1]+(this.rng()-.5)*3;
   x=clamp(x,-49.5,49.5);z=clamp(z,-49.5,49.5);
-  const e={id:++this.enemyId,kind,x,z,yaw:0,hp:p.hp,max:p.hp,attack:.4+this.rng()*.25,dead:false};
+  const e={id:++this.enemyId,kind,x,z,yaw:0,hp:p.hp,max:p.hp,attack:.4+this.rng()*.25,dead:false,lunge:0,lungeCooldown:2.0+(this.enemyId%6)*.65};
   this.enemies.set(e.id,e);return e;
  }
  input(id,packet){
@@ -293,8 +293,14 @@ export class CoopRoom {
    if(!target)continue;
    const vx=(target.x-e.x)/(d||1),vz=(target.z-e.z)/(d||1);
    e.yaw=Math.atan2(vx,vz)+Math.PI;
-   const surge=e.kind==='runner'?.16:e.kind==='brute'?.06:.1;
-   const sp=cfg.speed*(1+surge*clamp(1-d/23,0,1));
+   e.lunge=Math.max(0,e.lunge-dt);
+   e.lungeCooldown=Math.max(0,e.lungeCooldown-dt);
+   if(e.lungeCooldown===0&&d>cfg.range+1.1&&d<12){
+    e.lunge=.58;e.lungeCooldown=(e.kind==='runner'?7.2:8.8)+(e.id%4)*.6;
+   }
+   const surge=e.kind==='runner'?.27:e.kind==='brute'?.12:.20;
+   const sprintLunge=e.lunge>0?(e.kind==='runner'?1.33:e.kind==='brute'?1.38:1.25):1;
+   const sp=Math.min(cfg.speed*1.7,cfg.speed*(1+surge*clamp(1-d/20,0,1))*sprintLunge);
    if(d>cfg.range){const nx=e.x+vx*sp*dt,nz=e.z+vz*sp*dt;
     if(!obstructed(nx,nz,cfg.radius)){e.x=nx;e.z=nz}else{
      const sx=-vz,sz=vx;
@@ -331,7 +337,7 @@ export class CoopRoom {
     weapon:p.weapon,ammo:p.ammo, reserve:p.reserve,reloading:!!p.reloading,kills:p.kills,score:p.score,seq:p.sequence,
    })),
    enemies:[...this.enemies.values()].map(e=>({id:e.id,kind:e.kind,x:+e.x.toFixed(2),z:+e.z.toFixed(2),
-    yaw:+e.yaw.toFixed(3),hp:+e.hp.toFixed(1),max:e.max})),
+    yaw:+e.yaw.toFixed(3),hp:+e.hp.toFixed(1),max:e.max,rush:e.lunge>0})),
   };
  }
  dispatch(id,msg){
