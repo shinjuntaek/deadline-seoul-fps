@@ -95,7 +95,7 @@ js=replaceExact(
   js,
   "document.addEventListener('pointerlockchange',()=>{if(!coarse&&phase==='playing'&&document.pointerLockElement!==dom.game)pauseGame(false)});",
   "let seenLock=false;document.addEventListener('pointerlockchange',()=>{if(document.pointerLockElement===dom.game){seenLock=true;return}if(!coarse&&seenLock&&phase==='playing'){seenLock=false;pauseGame(false)}});",
-  'don't auto-pause on initially denied pointer lock'
+  'do not pause on initially denied pointer lock'
 );
 const badLock="if(!coarse)dom.game.requestPointerLock().catch(()=>{})";
 if(js.split(badLock).length!==3)throw new Error('Expected two original pointer lock calls');
