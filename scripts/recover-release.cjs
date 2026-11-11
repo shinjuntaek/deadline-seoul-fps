@@ -46,5 +46,44 @@ const js=fs.readFileSync(path.join(dist,'game.js'),'utf8');
 if(!html.includes('id="game"')||!html.includes('id="menu"')||!js.includes('WebGLRenderer'))
   throw new Error('FPS/WebGL entrypoints missing from release.');
 const lookup=['function spawnEnemy','function createEnemy','function makeEnemy','function spawnZombie','function createZombie','class Zombie','function buildZombie','function boot','function waitThree','const scene=new THREE.Scene()','new THREE.TextureLoader','THREE.Sprite','function shoot','function frame','new AudioContext','AudioContext','localStorage'];
+
+/* Self-hosted Three.js ESM prevents the removed r161+ UMD URL from freezing loading. */
+const threeModule = path.join(root,'node_modules','three','build','three.module.js');
+if(!fs.existsSync(threeModule)) throw new Error('Expected Three.js ESM module missing from npm install.');
+fs.mkdirSync(path.join(dist,'vendor'),{recursive:true});
+fs.copyFileSync(threeModule,path.join(dist,'vendor','three.module.js'));
+let revisedHtml=html;
+const removedUmd='<script src="https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.min.js"></script>';
+if(!revisedHtml.includes(removedUmd))
+  throw new Error('Expected removed Three.js UMD script not found; review upstream archive before patch.');
+revisedHtml=revisedHtml.replace(removedUmd,'<script type="module">import * as THREE from "/vendor/three.module.js"; window.THREE=THREE;</script>');
+const manifest=JSON.parse(fs.readFileSync(path.join(root,'assets','bbanana-manifest.json'),'utf8'));
+const hero=manifest.assets.hero.url;
+if(!hero.startsWith('https://')) throw new Error('Invalid hero asset origin');
+revisedHtml=revisedHtml.replace('<meta property="og:image" content="/og-image.svg">','<meta property="og:image" content="'+hero+'">');
+revisedHtml=revisedHtml.replace('</head>','<link rel="preconnect" href="https://uyncfjzfumputmyodmlr.supabase.co" crossorigin>\n</head>');
+fs.writeFileSync(path.join(dist,'index.html'),revisedHtml);
+fs.writeFileSync(path.join(dist,'ai-assets.json'),JSON.stringify(manifest,null,2)+'\n');
+const extraCSS=[
+'/* BBANANA-generated Seoul quarantine visual / 2026-11-11 */',
+'#menu.screen {',
+' background-image:linear-gradient(90deg,rgba(5,9,13,.93) 0%,rgba(6,11,15,.70) 45%,rgba(7,11,15,.54) 100%),url("'+hero+'") !important;',
+' background-color:#080d11 !important;',
+' background-repeat:no-repeat !important;',
+' background-position:center center !important;',
+' background-size:cover !important;',
+'}',
+'#menu .menu-copy {text-shadow:0 2px 24px rgba(0,0,0,.38)}',
+'#menu .briefing {background:rgba(8,14,17,.77);backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px)}',
+'@media (max-width:640px) {#menu.screen {background-position:58% center !important}#menu .briefing {backdrop-filter:none;-webkit-backdrop-filter:none}}',
+'@media (prefers-reduced-motion:reduce){#menu *{animation-duration:.01ms !important;transition-duration:.01ms !important}}'
+].join('\n');
+fs.appendFileSync(path.join(dist,'style.css'),'\n'+extraCSS+'\n');
+console.log('THREE_ESM_PATCH_OK',JSON.stringify({threeBytes:fs.statSync(threeModule).size,aiAssets:Object.keys(manifest.assets),hero}));
+const enemySrcIdx=js.indexOf('function createEnemy');
+console.log('ENEMY_SOURCE',JSON.stringify(enemySrcIdx>=0?js.slice(enemySrcIdx,enemySrcIdx+6400):'not found'));
+console.log('WORLD_SOURCE',JSON.stringify(js.slice(Math.max(0,js.indexOf('function initialProps')-100),js.indexOf('function initialProps')+2200)));
+console.log('VERCEL_JSON',JSON.stringify(fs.readFileSync(path.join(dist,'vercel.json'),'utf8')));
+
 console.log('RECOVERY_OK',JSON.stringify({encodedBytes:encoded.length,gzipBytes:bytes.length,tarBytes:tar.length,sha256:crypto.createHash('sha256').update(tar).digest('hex'),files:fileList}));
 console.log('GAME_AUDIT',JSON.stringify({htmlBytes:Buffer.byteLength(html),scriptBytes:Buffer.byteLength(js),threeScripts:(html.match(/<script[^>]+>/g)||[]),markers:lookup.map(k=>({term:k,count:js.split(k).length-1,context:(js.indexOf(k)>=0?js.slice(Math.max(0,js.indexOf(k)-90),js.indexOf(k)+370).replace(/\n/g,' '):null)}))}));
