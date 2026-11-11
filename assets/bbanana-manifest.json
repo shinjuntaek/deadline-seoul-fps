@@ -1,0 +1,27 @@
+{
+  "generatedBy": "BBANANA Nano Banana 2.1",
+  "generatedAt": "2026-11-11T02:27:51Z",
+  "game": "DEADLINE: SEOUL",
+  "assets": {
+    "hero": {
+      "url": "https://uyncfjzfumputmyodmlr.supabase.co/storage/v1/object/public/public-assets/user-aed58a59-713c-4cd8-923d-af48e7cc6949/bbanana/gvi_1794364034127_q5nx1.png",
+      "role": "menu background and social preview"
+    },
+    "runner": {
+      "url": "https://uyncfjzfumputmyodmlr.supabase.co/storage/v1/object/public/public-assets/user-aed58a59-713c-4cd8-923d-af48e7cc6949/bbanana/gvi_1794364044688_nzarmn.png",
+      "role": "runner infected character reference"
+    },
+    "brute": {
+      "url": "https://uyncfjzfumputmyodmlr.supabase.co/storage/v1/object/public/public-assets/user-aed58a59-713c-4cd8-923d-af48e7cc6949/bbanana/gvi_1794364053568_548k3.png",
+      "role": "brute infected character reference"
+    },
+    "stalker": {
+      "url": "https://uyncfjzfumputmyodmlr.supabase.co/storage/v1/object/public/public-assets/user-aed58a59-713c-4cd8-923d-af48e7cc6949/bbanana/gvi_1794364059836_njiesf.png",
+      "role": "stalker infected character reference"
+    },
+    "decals": {
+      "url": "https://uyncfjzfumputmyodmlr.supabase.co/storage/v1/object/public/public-assets/user-aed58a59-713c-4cd8-923d-af48e7cc6949/bbanana/gvi_1794364071208_dh2lfs.png",
+      "role": "quarantine warning environmental decal atlas"
+    }
+  }
+}
