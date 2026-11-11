@@ -183,6 +183,20 @@ test('Actual BBANANA zombies appear in front of opaque geometry with 3D raycasti
  assert(js.includes("torso.userData={enemy:z,part:'body'}"),'Do not discard original hitboxes');
 });
 
+test('Photo cutouts are unoccluded only when loaded, while 3D hit geometry remains',()=>{
+ assert(js.includes('function applyPhotographicZombieSkin(z){'));
+ assert(js.includes('if(!img||!(img.width||img.naturalWidth)||!tex.isTexture)return;'));
+ assert(js.includes('mat.colorWrite=false;mat.depthWrite=false;'));
+ assert(js.includes('applyPhotographicZombieSkin(z);'));
+ assert(js.includes('window.__DEADLINE_ZOMBIE_ART__=()=>'));
+ assert(fs.existsSync(path.join(dist,'zombie-art-audit.json')));
+ const art=JSON.parse(read('zombie-art-audit.json'));
+ for(const n of ['stalker','runner','brute']){
+  assert(art[n].solidPercent>=4&&art[n].solidPercent<=92,
+    'Bad green-screen transparency: '+n+' '+JSON.stringify(art[n]));
+ }
+});
+
 const report={game:'DEADLINE: SEOUL',kind:'static regression verification',passed:tests.length,checks:tests,waves,
  knownLimitations:[
   'Full 5-wave playthrough and extraction ending not yet observed in real browser',
