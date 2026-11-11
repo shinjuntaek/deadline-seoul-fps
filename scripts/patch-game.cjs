@@ -72,7 +72,7 @@ for(const name of ['hero','stalker','runner','brute','decals']){
   const stat=fs.statSync(path.join(dist,'assets',name+'.webp'));
   if(stat.size<2000)throw new Error('Game asset unexpectedly small '+name);
 }
-if(html.includes('three.min.js'))throw new Error('Obsolete Three.js UMD remains');
+if(/<script[^>]+src=[\"'][^\"']*three\.min\.js/.test(html))throw new Error('Obsolete Three.js UMD script remains');
 if(!js.includes('AI_TEXTURES')||!js.includes('THREE.Sprite'))throw new Error('Enemy visual upgrade missing');
 const report={
   source:'BBANANA Nano Banana 2.1 (existing generations)',
