@@ -109,6 +109,11 @@ test('Live opt-in combat and timed FPS diagnostic are available',()=>{
   assert(js.includes('function launchDeviceBenchmark(){'));
   assert(js.includes('window.__DEADLINE_BENCHMARK__=result'));
 });
+test('Tracer distance and restart GPU cleanup are correct',()=>{
+ assert(js.includes('rayLength=dir.length()'));
+ assert(js.includes('disposeTemporaryProp(p.group)'));
+ assert(js.includes('disposeTemporaryProp(b.group)'));
+});
 const report={game:'DEADLINE: SEOUL',kind:'static regression verification',passed:tests.length,checks:tests,waves,
  knownLimitations:[
   'Full 5-wave playthrough and extraction ending not yet observed in real browser',
