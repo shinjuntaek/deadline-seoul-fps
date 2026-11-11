@@ -53,7 +53,7 @@ const rigDetails=[
 "}"
 ].join('\n');
 patch('const z={id:enemyId++',rigDetails+'\nconst z={id:enemyId++','3D zombie rig');
-patch('g.userData.enemy=z;torso.userData','z.detailRig=detailRig;g.userData.enemy=z;torso.userData','store animated rig');
+patch('g.userData.enemy=z;torso.userData','z.detailRig=detailRig;g.userData.enemy=z;g.traverse(o=>{if(o.isMesh&&!o.userData.part)o.userData={enemy:z,part:o.material===eyeM?\'head\':\'body\'}});torso.userData','store animated rig');
 const animate=[
 "/* Layered procedural animation: shoulder counter-rotation, bent elbows/knees,",
 "   shuffling footfall, aggressive arm reach, spinal tilt and independent head sway. */",
