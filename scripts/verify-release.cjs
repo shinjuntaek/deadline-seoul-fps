@@ -94,6 +94,21 @@ test('QA mode exposes diagnostic HUD without shipping debugging UI by default',(
   assert(js.includes('window.__DEADLINE_QA__=()=>'));
   assert(html.includes('id="hud-top"'));
 });
+test('Volumetric zombie articulation and detailed PBR weapons',()=>{
+  assert(js.includes('const detailRig={elbows:[],knees:[]'));
+  assert(js.includes('rig.elbows.forEach'));
+  assert(js.includes('rig.knees.forEach'));
+  assert(js.includes('o.material===eyeM'));
+  assert(js.includes('const detailedWeaponParts={}'));
+  assert(js.includes('detailedWeaponParts.rifleMag.position.y'));
+  assert(js.includes('detailedWeaponParts.pump.position.z'));
+});
+test('Live opt-in combat and timed FPS diagnostic are available',()=>{
+  assert(js.includes("qaParams.get('qa')==='release'"));
+  assert(js.includes('function runReleaseQA(){'));
+  assert(js.includes('function launchDeviceBenchmark(){'));
+  assert(js.includes('window.__DEADLINE_BENCHMARK__=result'));
+});
 const report={game:'DEADLINE: SEOUL',kind:'static regression verification',passed:tests.length,checks:tests,waves,
  knownLimitations:[
   'Full 5-wave playthrough and extraction ending not yet observed in real browser',
