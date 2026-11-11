@@ -5,6 +5,8 @@ on:
     branches: [main]
     paths:
       - "scripts/**"
+      - "api/**"
+      - "multiplayer/**"
       - "assets/**"
       - "release/**"
       - "package.json"
@@ -37,9 +39,9 @@ jobs:
       - name: Recover source and build all optimized game assets
         run: npm run build
 
-      - name: Start local static build
+      - name: Start local real WebSocket and game server
         run: |
-          python3 -m http.server 4173 --bind 127.0.0.1 --directory dist > /tmp/deadline-browser-qa.log 2>&1 &
+          node scripts/coop-dev-server.mjs > /tmp/deadline-browser-qa.log 2>&1 &
           echo $! > /tmp/deadline-browser-qa.pid
           for n in $(seq 1 30); do
             curl -fsS http://127.0.0.1:4173/ > /dev/null && exit 0
@@ -52,6 +54,11 @@ jobs:
         env:
           GAME_BASE_URL: http://127.0.0.1:4173
         run: node scripts/browser-smoke.cjs
+
+      - name: Two-player browser and actual server co-op integration
+        env:
+          GAME_BASE_URL: http://127.0.0.1:4173
+        run: node scripts/browser-coop.cjs
 
       - name: Upload QA report and screenshots
         if: always()
