@@ -116,6 +116,16 @@ test('Tracer distance and restart GPU cleanup are correct',()=>{
  assert(js.includes('disposeTemporaryProp(p.group)'));
  assert(js.includes('disposeTemporaryProp(b.group)'));
 });
+test('Zombie pursuit speeds and nearby rush are higher while 194 enemies remain',()=>{
+  const profiles=js.match(/const profiles=\{walker:\{hp:108,speed:([\d.]+)[\s\S]*?runner:\{hp:74,speed:([\d.]+)[\s\S]*?brute:\{hp:840,speed:([\d.]+)/);
+  assert(profiles,'Missing complete enemy speed profile');
+  assert.deepEqual(profiles.slice(1).map(Number),[1.65,3.45,1.08]);
+  assert(js.includes('proximity=THREE.MathUtils.clamp(1-dist/23,0,1)'));
+  assert(js.includes("surge=z.kind==='runner'?.16:z.kind==='brute'?.06:.10"));
+  assert(js.includes('step=p.speed*(1+surge*proximity)*dt'));
+  assert.deepEqual(waves.map(w=>w.walkers+w.runners+w.brutes),[14,24,36,50,70]);
+});
+
 const report={game:'DEADLINE: SEOUL',kind:'static regression verification',passed:tests.length,checks:tests,waves,
  knownLimitations:[
   'Full 5-wave playthrough and extraction ending not yet observed in real browser',
