@@ -63,7 +63,7 @@ const ogDesc='서울 격리구역에서 살아남아라. 설치 없이 즐기는
  }
  // Bots inspect the original server HTML, not JavaScript-created metadata.
  // Strip the archived placeholder tags before inserting a single canonical set.
- html=html.replace(/^[ \t]*<meta[^\n]*(?:property="og:|name="twitter:")[^\n]*\r?\n/gm,'');
+ html=html.replace(/^[ \t]*<meta[ \t]+(?:property="og:[^"]+"|name="twitter:[^"]+")[^\n]*\r?\n/gm,'');
  html=html.replace(/^[ \t]*<link[^\n]*rel="canonical"[^\n]*\r?\n/gm,'');
  html=html.replace(/<meta name="description" content="[^"]*">/,
   '<meta name="description" content="'+ogDesc+'">');
