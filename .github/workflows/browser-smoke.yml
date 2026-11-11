@@ -54,15 +54,15 @@ jobs:
           cat /tmp/deadline-browser-qa.log
           exit 1
 
-      - name: Real Chromium input tests and mobile-viewport emulation
-        env:
-          GAME_BASE_URL: http://127.0.0.1:4173
-        run: node scripts/browser-smoke.cjs
-
       - name: Two-player browser and actual server co-op integration
         env:
           GAME_BASE_URL: http://127.0.0.1:4173
         run: node scripts/browser-coop.cjs
+
+      - name: Real Chromium input tests and mobile-viewport emulation
+        env:
+          GAME_BASE_URL: http://127.0.0.1:4173
+        run: node scripts/browser-smoke.cjs
 
       - name: Upload QA report and screenshots
         if: always()
