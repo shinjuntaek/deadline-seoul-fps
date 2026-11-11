@@ -12,7 +12,7 @@ if(js.split(marker).length!==2)throw new Error('QA integration marker must be un
 const inject=[
 "/* QA release integration. Explicit opt-in only; never run during regular play. */",
 "const qaParams=new URLSearchParams(location.search);",
-"const releaseQa=qaParams.get('qa')==='release'&&location.hostname.endsWith('.vercel.app');",
+"const releaseQa=qaParams.get('qa')==='release'&&(location.hostname.endsWith('.vercel.app')||location.hostname==='127.0.0.1'||location.hostname==='localhost');",
 "const benchQa=qaParams.get('benchmark')==='1';",
 "let qaPanel=null;",
 "function qaPanelCreate(){",
