@@ -59,8 +59,11 @@ async function waitWS(ws,condition,timeout=7000){
   ws.send(JSON.stringify({t:'ready',value:true}));
   await page.locator('#coop-ready').click();
   await buddyReady;
+  // Attach listener before clicking: the host may start instantly, so registering
+  // afterward can drop the broadcast and incorrectly time out a successful match.
+  const startPromise=waitWS(ws,m=>m.t==='start',12000);
   await page.locator('#coop-start').click();
-  const start=await waitWS(ws,m=>m.t==='start',12000);
+  const start=await startPromise;
   step('Host starts shared operation after both ready',start.wave===1,start);
   await page.locator('#hud-top:not(.hidden)').waitFor({state:'visible',timeout:70000});
   await page.waitForFunction(()=>window.__DEADLINE_COOP_STATUS__?.().active,{timeout:10000});
