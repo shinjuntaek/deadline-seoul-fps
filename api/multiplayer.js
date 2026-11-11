@@ -51,8 +51,11 @@ wss.on('connection',(ws,req)=>{
  const origin=String(req.headers.origin||'');
  const reqHost=String(req.headers.host||'');
  const siteHost=origin?new URL(origin).host:'';
- if(origin&&siteHost!==reqHost&&
-   !(siteHost.endsWith('.vercel.app')&&reqHost.endsWith('.vercel.app'))){
+ const allowlist=String(process.env.COOP_ALLOWED_ORIGINS||'').split(',').map(s=>s.trim()).filter(Boolean);
+ const sameSite=siteHost===reqHost;
+ const samePreviewFamily=siteHost.endsWith('.vercel.app')&&reqHost.endsWith('.vercel.app');
+ const explicitlyAllowed=allowlist.includes(origin);
+ if(origin&&!sameSite&&!samePreviewFamily&&!explicitlyAllowed){
   send(ws,{t:'error',code:'FORBIDDEN_ORIGIN'});ws.close(1008,'Origin rejected');return;
  }
  const clientId=crypto.randomUUID();
