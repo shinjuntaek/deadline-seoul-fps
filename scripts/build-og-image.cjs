@@ -13,6 +13,12 @@ const dist=path.resolve(__dirname,'..','dist');
 const photo=path.join(dist,'assets','hero.webp');
 const htmlPath=path.join(dist,'index.html');
 const output=path.join(dist,'og-image.jpg');
+const shareFilename='og-image-share-v2.jpg';
+const shareOutput=path.join(dist,shareFilename);
+// Stable alias has an explicit public protection override; deployment previews do not.
+const gameOrigin='https://deadline-seoul-play-shinjuntaek1207-1041.vercel.app';
+const canonicalURL=gameOrigin+'/';
+const shareImageURL=gameOrigin+'/'+shareFilename;
 if(!fs.existsSync(photo))throw new Error('Missing locally optimized Seoul key art');
 const svg=String.raw`<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
  <defs>
@@ -47,39 +53,52 @@ const ogDesc='서울 격리구역에서 살아남아라. 설치 없이 즐기는
   .jpeg({quality:88,mozjpeg:true,progressive:true})
   .toBuffer();
  fs.writeFileSync(output,jpeg);
+ fs.writeFileSync(shareOutput,jpeg);
  const m=await sharp(jpeg).metadata();
  assert.equal(m.width,1200);assert.equal(m.height,630);
  assert(jpeg.length<1000000,'OG image size exceeds 1MB budget');
  let html=fs.readFileSync(htmlPath,'utf8');
- const sourceTag=/<meta property="og:image" content="[^"]*">/;
- if(!sourceTag.test(html))throw new Error('OG image tag not found in game index');
- const host=process.env.VERCEL_URL||'';
- const goodHost=/^[a-z0-9][a-z0-9.-]+\.vercel\.app$/i.test(host);
- const imgURL=goodHost?'https://'+host+'/og-image.jpg':'/og-image.jpg';
- html=html.replace(sourceTag,
-  '<meta property="og:image" content="'+imgURL+'">'+
-  '\n  <meta property="og:image:secure_url" content="'+imgURL+'">'+
-  '\n  <meta property="og:image:width" content="1200">'+
-  '\n  <meta property="og:image:height" content="630">'+
-  '\n  <meta property="og:image:type" content="image/jpeg">'+
-  '\n  <meta property="og:image:alt" content="DEADLINE: SEOUL — 서울 격리구역 좀비 FPS">');
- html=html.replace(/<meta property="og:title" content="[^"]*">/,
-  '<meta property="og:title" content="'+ogTitle+'">');
- html=html.replace(/<meta property="og:description" content="[^"]*">/,
-  '<meta property="og:description" content="'+ogDesc+'">');
- if(html.includes('<meta name="twitter:card" content="summary_large_image">')){
-  html=html.replace('<meta name="twitter:card" content="summary_large_image">',
-   '<meta name="twitter:card" content="summary_large_image">'+
-   '\n  <meta name="twitter:image" content="'+imgURL+'">'+
-   '\n  <meta name="twitter:title" content="'+ogTitle+'">'+
-   '\n  <meta name="twitter:description" content="'+ogDesc+'">');
+ if(!/<meta property="og:image" content="[^"]*">/.test(html)){
+  throw new Error('Missing og:image in extracted source HTML');
  }
+ // Bots inspect the original server HTML, not JavaScript-created metadata.
+ // Strip the archived placeholder tags before inserting a single canonical set.
+ html=html.replace(/^[ \t]*<meta[ \t]+(?:property="og:[^"]+"|name="twitter:[^"]+")[^\n]*\r?\n/gm,'');
+ html=html.replace(/^[ \t]*<link[^\n]*rel="canonical"[^\n]*\r?\n/gm,'');
+ html=html.replace(/<meta name="description" content="[^"]*">/,
+  '<meta name="description" content="'+ogDesc+'">');
+ const socialMeta=[
+  '<link rel="canonical" href="'+canonicalURL+'">',
+  '<meta property="og:type" content="website">',
+  '<meta property="og:site_name" content="DEADLINE: SEOUL">',
+  '<meta property="og:locale" content="ko_KR">',
+  '<meta property="og:url" content="'+canonicalURL+'">',
+  '<meta property="og:title" content="'+ogTitle+'">',
+  '<meta property="og:description" content="'+ogDesc+'">',
+  '<meta property="og:image" content="'+shareImageURL+'">',
+  '<meta property="og:image:secure_url" content="'+shareImageURL+'">',
+  '<meta property="og:image:width" content="1200">',
+  '<meta property="og:image:height" content="630">',
+  '<meta property="og:image:type" content="image/jpeg">',
+  '<meta property="og:image:alt" content="데드라인 서울 — 좀비 FPS 게임 포스터">',
+  '<meta name="twitter:card" content="summary_large_image">',
+  '<meta name="twitter:url" content="'+canonicalURL+'">',
+  '<meta name="twitter:title" content="'+ogTitle+'">',
+  '<meta name="twitter:description" content="'+ogDesc+'">',
+  '<meta name="twitter:image" content="'+shareImageURL+'">',
+  '<meta name="twitter:image:alt" content="데드라인 서울 — 좀비 FPS 게임 포스터">'
+ ];
+ const anchor='  <link rel="manifest" href="/manifest.webmanifest">';
+ if(!html.includes(anchor))throw Error('Missing HTML head metadata insertion anchor');
+ html=html.replace(anchor,socialMeta.map(tag=>'  '+tag).join('\n')+'\n'+anchor);
+ if(!html.includes('content="'+shareImageURL+'"'))throw Error('Failed to emit absolute public OG image');
+ if(html.includes('content="/og-image.jpg"'))throw Error('Relative OG image URL survived rewriting');
  fs.writeFileSync(htmlPath,html);
  fs.writeFileSync(path.join(dist,'og-image-report.json'),JSON.stringify({
   source:'Existing BBANANA Seoul concept art, local sharp composition',
-  filename:'og-image.jpg',width:m.width,height:m.height,
-  bytes:jpeg.length,format:m.format,ogImage:imgURL,
-  ogTitle,ogDesc,uploadedToExternalStorage:false
+  filename:shareFilename,width:m.width,height:m.height,
+  bytes:jpeg.length,format:m.format,ogImage:shareImageURL,ogUrl:canonicalURL,
+  ogTitle,ogDesc,uploadedToExternalStorage:false,publicAlias:true
  },null,2)+'\n');
- console.log('OG_IMAGE_READY',JSON.stringify({dimensions:'1200x630',bytes:jpeg.length,metaURL:imgURL,htmlUpdated:true}));
+ console.log('OG_IMAGE_READY',JSON.stringify({dimensions:'1200x630',bytes:jpeg.length,metaURL:shareImageURL,ogUrl:canonicalURL,htmlUpdated:true}));
 })().catch(err=>{console.error(err);process.exitCode=1});
