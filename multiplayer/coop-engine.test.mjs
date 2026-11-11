@@ -76,6 +76,16 @@ test('Damage and three-second co-op revive are resolved by server',()=>{
  assert.equal(b.downed,false);assert.equal(b.health,35);
  assert.equal(b.revive,0);
 });
+test('Server zombies can cross both central checkpoint gaps',()=>{
+ const {room,members,go,step}=setup();go();
+ const p=room.players.get(members[0].playerId);
+ const p2=room.players.get(members[1].playerId);
+ p.x=0;p.z=27;p2.x=1;p2.z=27;
+ const zombie=room.spawnEnemy('walker');zombie.x=0;zombie.z=37;zombie.lungeCooldown=60;
+ for(let k=0;k<42;k++)step(.05);
+ assert(zombie.z<34,'Zombie must pass previous z=34 wall instead of freezing behind it: '+zombie.z);
+ assert(zombie.z>28,'Zombie should be limited by movement speed');
+});
 test('Full five-wave room director spawns 194 enemies and unlocks shared extraction',()=>{
  const {room,go,step,members}=setup();go();
  assert.equal(WAVE_CONFIG.reduce((sum,w)=>sum+w.walker+w.runner+w.brute,0),194);
