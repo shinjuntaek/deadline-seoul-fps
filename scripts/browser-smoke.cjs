@@ -41,7 +41,7 @@ async function runCase(browser,variant){
   const result={device:name,viewport:variant.options.viewport??'emulated Pixel 7',status:'PENDING',steps:[],errors,failedRequests};
   const check=(label,ok,actual)=>{result.steps.push({label,pass:!!ok,actual});assert(ok,label+': '+JSON.stringify(actual))};
   try{
-    await page.goto(url,{waitUntil:'domcontentloaded',timeout:60000});
+    await page.goto(url+(url.includes('?')?'&':'?')+'qa=1',{waitUntil:'domcontentloaded',timeout:60000});
     await page.locator('#menu:not(.hidden)').waitFor({state:'visible',timeout:60000});
     await page.screenshot({path:path.join(reports,name+'-menu.png')});
     check('menu visible',await page.locator('#start').isVisible(),true);
@@ -54,6 +54,11 @@ async function runCase(browser,variant){
     const ammoBefore=+(await page.locator('#ammo').innerText());
     check('rifle ammo 30',ammoBefore===30,ammoBefore);
     await page.screenshot({path:path.join(reports,name+'-wave1.png')});
+    // Verify the loaded AI human photo is actually used, rather than crude capsules.
+    await page.waitForFunction(()=>window.__DEADLINE_ZOMBIE_ART__?.().photoActive>0,null,{timeout:30000});
+    const photoInfo=await page.evaluate(()=>window.__DEADLINE_ZOMBIE_ART__());
+    check('Photoreal zombie cutout takes over after texture loads',photoInfo.photoActive>0,photoInfo);
+
     // Genuine mouse input, not a direct game-engine function invocation.
     if(name==='desktop'){
       try{
