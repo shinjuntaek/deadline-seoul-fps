@@ -179,7 +179,7 @@ js=replaceExact(js,
 );
 const swPath=path.join(dist,'service-worker.js');
 let sw=fs.readFileSync(swPath,'utf8');
-if(!sw.includes("'og-image.png'")||!sw.includes("deadline-seoul-v3"))throw new Error('Unexpected original offline cache format');
+if(!sw.includes("'/og-image.png'")||!sw.includes("deadline-seoul-v3"))throw new Error('Unexpected original offline cache format');
 sw=sw.replace('deadline-seoul-v3','deadline-seoul-v4-ai').replace("'/og-image.png'","'/og-image.svg','/vendor/three.module.js','/assets/hero.webp','/assets/runner.webp','/assets/brute.webp','/assets/stalker.webp','/assets/decals.webp'");
 sw=sw.replace("r||caches.match('/index.html')","r||(e.request.mode==='navigate'?caches.match('/index.html'):Response.error())");
 fs.writeFileSync(swPath,sw);
