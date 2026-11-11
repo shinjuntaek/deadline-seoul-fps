@@ -119,10 +119,10 @@ test('Tracer distance and restart GPU cleanup are correct',()=>{
 test('Zombie pursuit speeds and nearby rush are higher while 194 enemies remain',()=>{
   const profiles=js.match(/const profiles=\{walker:\{hp:108,speed:([\d.]+)[\s\S]*?runner:\{hp:74,speed:([\d.]+)[\s\S]*?brute:\{hp:840,speed:([\d.]+)/);
   assert(profiles,'Missing complete enemy speed profile');
-  assert.deepEqual(profiles.slice(1).map(Number),[1.65,3.45,1.08]);
-  assert(js.includes('proximity=THREE.MathUtils.clamp(1-dist/23,0,1)'));
-  assert(js.includes("surge=z.kind==='runner'?.16:z.kind==='brute'?.06:.10"));
-  assert(js.includes('step=p.speed*(1+surge*proximity)*dt'));
+  assert.deepEqual(profiles.slice(1).map(Number),[2.25,4.9,1.55]);
+  assert(js.includes('proximity=THREE.MathUtils.clamp(1-dist/20,0,1)'));
+  assert(js.includes("surge=z.kind==='runner'?.27:z.kind==='brute'?.12:.20"));
+  assert(js.includes('step=Math.min(p.speed*1.7,p.speed*(1+surge*proximity)*rush)*dt'));
   assert.deepEqual(waves.map(w=>w.walkers+w.runners+w.brutes),[14,24,36,50,70]);
 });
 
@@ -158,6 +158,14 @@ test('Co-op lobby, server-authoritative shooting and teammate rendering are wire
  assert(js.includes('roomParam'));
  assert(fs.existsSync(path.join(root,'api','multiplayer.js')));
  assert(fs.existsSync(path.join(root,'multiplayer','coop-engine.mjs')));
+});
+
+test('Nightmare pursuit is bounded with horror animation, synth groans and co-op rush sync',()=>{
+ for(const mark of ['function horrorRush(z,dt,dist,range){','z.horrorRush=.58;','z.horrorCooldown=','function horrorReact(z,dist){','z.horrorMouth=horrorMouth','AudioSystem.prototype.snarl=','horror-threat-vignette','function horrorThreatFrame(dt){','horrorThreatFrame(dt);','z.coopRushing=!!e.rush;']){
+  assert(js.includes(mark),'Missing horror feature: '+mark);
+ }
+ assert(js.includes("if(quality!=='low'&&!ultraLow){"),'Low-end needs no extra face geometry');
+ assert(js.includes("Math.min(p.speed*1.7,p.speed*(1+surge*proximity)*rush)"),'Movement capped for stability');
 });
 
 const report={game:'DEADLINE: SEOUL',kind:'static regression verification',passed:tests.length,checks:tests,waves,
