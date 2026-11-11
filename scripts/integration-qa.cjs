@@ -78,7 +78,7 @@ const inject=[
 "  updateEnemy(target,.10);",
 "  check('Death animation begins with stagger',target.deathPhase==='stagger',{phase:target.deathPhase,t:target.death});",
 "  updateEnemy(target,.32);",
-"  check('Dead zombie visibly falls sideways',target.deathPhase==='fall'&&(target.photoSprite?Math.abs(target.photoSprite.rotation.z)>.2:Math.abs(target.group.rotation.z)>.05),{phase:target.deathPhase,rotation:target.photoSprite?.rotation.z});",
+"  check('Dead zombie visibly falls sideways',target.deathPhase==='fall'&&(target.photographicActive?Math.abs(target.photoSprite.rotation.z)>.2:Math.abs(target.group.rotation.z)>.05),{phase:target.deathPhase,photoLoaded:!!target.photographicActive,spriteRotation:target.photoSprite?.rotation.z,meshRotation:target.group.rotation.z});",
 "  updateEnemy(target,.60);",
 "  check('Corpse remains on ground instead of disappearing instantly',target.deathPhase==='down'&&target.group.parent===scene,{phase:target.deathPhase,t:target.death,corpseOpacity:target.deadCorpse?.material.opacity});",
 "  check('Kill confirmation is visible',!!zombieKillBadge&&zombieKillBadge.textContent.includes('처치'),{label:zombieKillBadge?.textContent});",
