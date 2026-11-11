@@ -63,7 +63,9 @@ const charArt=[
   '}'
 ].join('\n');
 js=insertOnce(js,'const scene=new THREE.Scene();','\n'+preload+'\n','3D scene');
-js=insertOnce(js,'const z={id:enemyId++','\n'+charArt+'\n','Enemy geometry');
+const enemyParts=js.split('const z={id:enemyId++');
+if(enemyParts.length!==2)throw new Error('Enemy geometry marker mismatch');
+js=enemyParts[0]+'\n'+charArt+'\nconst z={id:enemyId++'+enemyParts[1];
 fs.writeFileSync(jsPath,js);
 cp.execFileSync(process.execPath,['--check',jsPath]);
 for(const name of ['hero','stalker','runner','brute','decals']){
