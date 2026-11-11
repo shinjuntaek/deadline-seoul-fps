@@ -3,7 +3,7 @@
   "private": true,
   "version": "1.0.0-rc.5",
   "scripts": {
-    "build": "node scripts/recover-release.cjs",
+    "build": "node scripts/recover-release.cjs && node scripts/prepare-assets.cjs && node scripts/patch-game.cjs",
     "test": "npm run build && node --check dist/game.js"
   },
   "dependencies": {
