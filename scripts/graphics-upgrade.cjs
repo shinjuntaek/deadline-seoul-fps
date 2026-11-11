@@ -140,6 +140,31 @@ const weaponAnimate=[
 "}"
 ].join('\n');
 patch('weaponRoot.rotation.z=sprint?-.18:0', 'weaponRoot.rotation.z=sprint?-.18:0;\n'+weaponAnimate,'weapon reload animation');
+
+/* Firing tracer uses world-space ray distance, not normalized unit vector. */
+patch(
+  'const dir=end.clone().sub(start),vis=start.clone().add(dir.normalize().multiplyScalar(Math.min(dir.length(),16)))',
+  'const dir=end.clone().sub(start),rayLength=dir.length(),vis=start.clone().add(dir.normalize().multiplyScalar(Math.min(rayLength,16)))',
+  'correct tracer visibility length'
+);
+/* Releasing non-enemy dynamic geometry prevents restart-session GPU leaks. */
+const disposeProp=[
+  'function disposeTemporaryProp(group){',
+  ' const geometries=new Set(),materials=new Set();',
+  ' group.traverse(o=>{',
+  '  if(o.geometry)geometries.add(o.geometry);',
+  '  if(o.material)(Array.isArray(o.material)?o.material:[o.material]).forEach(m=>materials.add(m));',
+  ' });',
+  ' scene.remove(group);',
+  ' geometries.forEach(g=>g.dispose&&g.dispose());',
+  ' materials.forEach(m=>m.dispose&&m.dispose());',
+  '}'
+].join('\n');
+patch('function clearRun(){',disposeProp+'\nfunction clearRun(){','temporary prop disposal');
+patch('pickups.forEach(p=>scene.remove(p.group));barrels.forEach(b=>scene.remove(b.group));',
+      'pickups.forEach(p=>disposeTemporaryProp(p.group));barrels.forEach(b=>disposeTemporaryProp(b.group));',
+      'prevent repeated-restart prop memory accumulation');
+
 fs.writeFileSync(file,js);
 cp.execFileSync(process.execPath,['--check',file],{stdio:'pipe'});
 console.log('PROCEDURAL_3D_RIG_AND_WEAPONS_OK',JSON.stringify({jsBytes:Buffer.byteLength(js),pbrWeaponDetails:true,riggedElbowsAndKnees:true,attackReach:true,cameraIndependent3D:true,weaponReloadMotion:true,paid3dGeneration:false}));
