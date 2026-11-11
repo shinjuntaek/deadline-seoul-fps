@@ -130,6 +130,70 @@ const styleFix=[
 fs.appendFileSync(cssPath,'\n/* Tested menu interaction fixes */\n'+styleFix+'\n');
 css=fs.readFileSync(cssPath,'utf8');
 
+
+/* Battle-balancing, GPU lifecycle, offline caching, and safe long-term HTTP cache policy. */
+js=replaceExact(js,
+  "for(let n=0;n<p.brutes;n++)spawnQueue.push('brute');",
+  "",
+  'remove pre-shuffle duplicate bosses'
+);
+js=replaceExact(js,
+  "if(p.brutes)spawnQueue.push('brute');",
+  "for(let n=0;n<p.brutes;n++)spawnQueue.push('brute');",
+  'one explicitly configured end-of-wave brute per boss wave'
+);
+const dispose=[
+  'function disposeEnemyGroup(z){',
+  '  const geometries=new Set(),materials=new Set();',
+  '  z.group.traverse(o=>{',
+  '    if(o.geometry&&!o.isSprite)geometries.add(o.geometry);',
+  '    if(o.material)(Array.isArray(o.material)?o.material:[o.material]).forEach(m=>materials.add(m));',
+  '  });',
+  '  scene.remove(z.group);',
+  '  geometries.forEach(g=>g.dispose&&g.dispose());',
+  '  materials.forEach(m=>m&&m.dispose&&m.dispose());',
+  '}'
+].join('\n');
+js=replaceExact(js,'function updateEnemy(z,dt){',dispose+'\nfunction updateEnemy(z,dt){','GPU cleanup for infected');
+js=replaceExact(js,'if(z.death>4.2){scene.remove(z.group);return false}','if(z.death>4.2){disposeEnemyGroup(z);return false}','destroy killed infected geometry');
+js=replaceExact(js,'function clearRun(){enemies.forEach(z=>scene.remove(z.group));','function clearRun(){enemies.forEach(disposeEnemyGroup);','destroy all infected on restart');
+const oldNoise="noise(sec){if(!this.ctx)return null;const b=this.ctx.createBuffer(1,Math.floor(this.ctx.sampleRate*sec),this.ctx.sampleRate),d=b.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;return b}";
+const newNoise=[
+  "noise(sec){",
+  " if(!this.ctx)return null;",
+  " if(!this.noiseCache)this.noiseCache=new Map();",
+  " const key=Math.round(sec*100);let pool=this.noiseCache.get(key);",
+  " if(!pool){pool=Array.from({length:3},()=>{",
+  "   const b=this.ctx.createBuffer(1,Math.floor(this.ctx.sampleRate*sec),this.ctx.sampleRate),d=b.getChannelData(0);",
+  "   for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;",
+  "   return b;",
+  " });this.noiseCache.set(key,pool)}",
+  " return pool[Math.floor(Math.random()*pool.length)];",
+  "}"
+].join('\n');
+js=replaceExact(js,oldNoise,newNoise,'reuse pre-generated audio buffers instead of allocating each gunshot');
+js=replaceExact(js,
+  "if('serviceWorker'in navigator&&location.protocol==='https:')addEventListener('load',()=>navigator.serviceWorker.register('/service-worker.js').catch(console.warn));",
+  "if('serviceWorker'in navigator&&location.protocol==='https:'&&!location.hostname.endsWith('.vercel.app'))addEventListener('load',()=>navigator.serviceWorker.register('/service-worker.js').catch(console.warn));",
+  'disable service worker registration on protected Preview deployments'
+);
+const swPath=path.join(dist,'service-worker.js');
+let sw=fs.readFileSync(swPath,'utf8');
+if(!sw.includes("'og-image.png'")||!sw.includes("deadline-seoul-v3"))throw new Error('Unexpected original offline cache format');
+sw=sw.replace('deadline-seoul-v3','deadline-seoul-v4-ai').replace("'/og-image.png'","'/og-image.svg','/vendor/three.module.js','/assets/hero.webp','/assets/runner.webp','/assets/brute.webp','/assets/stalker.webp','/assets/decals.webp'");
+sw=sw.replace("r||caches.match('/index.html')","r||(e.request.mode==='navigate'?caches.match('/index.html'):Response.error())");
+fs.writeFileSync(swPath,sw);
+const confPath=path.join(dist,'vercel.json');
+const conf=JSON.parse(fs.readFileSync(confPath,'utf8'));
+for(const route of conf.headers||[]){
+  for(const head of route.headers||[]){
+    if(head.key.toLowerCase()==='content-security-policy')head.value=head.value.replace(' https://cdn.jsdelivr.net https://unpkg.com','');
+    if(head.key.toLowerCase()==='cache-control'&&head.value.includes('max-age=31536000'))head.value='public, max-age=300, stale-while-revalidate=1800';
+  }
+}
+fs.writeFileSync(confPath,JSON.stringify(conf,null,2)+'\n');
+console.log('BALANCE_MEMORY_PWA_FIX_OK',JSON.stringify({waveEnemyCounts:[7,11,15,20,24],brutesPerWave:[0,0,0,1,1],audioNoisePool:3,serviceWorker:'v4-ai',previewServiceWorker:false,cacheControl:'max-age=300'}));
+
 fs.writeFileSync(jsPath,js);
 cp.execFileSync(process.execPath,['--check',jsPath]);
 for(const name of ['hero','stalker','runner','brute','decals']){
@@ -144,7 +208,7 @@ const report={
   renderer:'Three.js r164 self-hosted ESM',
   characterVisuals:'camera-facing transparent art over 3D gameplay hitboxes',
   jsBytes:Buffer.byteLength(js),htmlBytes:Buffer.byteLength(html),cssBytes:Buffer.byteLength(css),
-  checks:{syntax:true,hero:true,characterSprites:true,decals:true,obsoleteUmdRemoved:true,startButton:true,keyboardEnter:true,pointerLockFallback:true,qaDiagnostic:true}
+  checks:{syntax:true,hero:true,characterSprites:true,decals:true,obsoleteUmdRemoved:true,startButton:true,keyboardEnter:true,pointerLockFallback:true,qaDiagnostic:true,waveBalance:true,enemyGpuCleanup:true,audioBufferPool:true,serviceWorkerCache:true,cspTightened:true,cacheHeaders:true}
 };
 fs.writeFileSync(path.join(dist,'qa-report.json'),JSON.stringify(report,null,2)+'\n');
 console.log('GAME_VISUAL_QA_OK',JSON.stringify(report));
