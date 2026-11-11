@@ -41,7 +41,7 @@ async function runCase(browser,variant){
   const result={device:name,viewport:variant.options.viewport??'emulated Pixel 7',status:'PENDING',steps:[],errors,failedRequests};
   const check=(label,ok,actual)=>{result.steps.push({label,pass:!!ok,actual});assert(ok,label+': '+JSON.stringify(actual))};
   try{
-    await page.goto(url+'/?qa=1',{waitUntil:'domcontentloaded',timeout:60000});
+    await page.goto(url,{waitUntil:'domcontentloaded',timeout:60000});
     await page.locator('#menu:not(.hidden)').waitFor({state:'visible',timeout:60000});
     await page.screenshot({path:path.join(reports,name+'-menu.png')});
     check('menu visible',await page.locator('#start').isVisible(),true);
@@ -74,7 +74,7 @@ async function runCase(browser,variant){
           await page.waitForTimeout(280); // allow a slow software-WebGL frame
           let reloadStatus=await page.locator('#weapon-status').innerText();
           if(!reloadStatus.includes('RELOADING')){
-            const phase=await page.evaluate(()=>window.__DEADLINE_QA__?.().phase||'unknown');
+            const phase=await page.locator('#pause').isVisible()?'paused':'playing-or-menu';
             result.reloadDiagnostics={phase,status:reloadStatus};
             if(phase==='paused'){await page.locator('#resume').click();await page.keyboard.press('r');await page.waitForTimeout(300)}
             reloadStatus=await page.locator('#weapon-status').innerText();
