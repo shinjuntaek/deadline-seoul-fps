@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {CoopRoom,WAVE_CONFIG,WEAPON_CONFIG,validRoomCode,generateRoomCode} from './coop-engine.mjs';
+import {CoopRoom,WAVE_CONFIG,ENEMY_PROFILE,WEAPON_CONFIG,validRoomCode,generateRoomCode} from './coop-engine.mjs';
 const code='ABCDEFGHJKLMNPQRSTUVWXYZ23456789'.slice(0,6);
 function setup(n=2){
  let time=1000000;const room=new CoopRoom('ABCD23',{now:()=>time,rng:()=>.4});
@@ -113,4 +113,21 @@ test('Snapshot, disconnection and resume token use bounded public fields',()=>{
  const snap=room.snapshot();
  assert.equal(snap.code,'ABCD23');
  assert(!JSON.stringify(snap).includes(token));
+});
+
+test('Fast runner and chase lunge stay bounded and visible to cooperative peers',()=>{
+ const {room,members,go,step}=setup();go();
+ assert.equal(ENEMY_PROFILE.walker.speed,2.25);
+ assert.equal(ENEMY_PROFILE.runner.speed,4.9);
+ assert.equal(ENEMY_PROFILE.brute.speed,1.55);
+ const p=room.players.get(members[0].playerId);
+ const e=room.spawnEnemy('runner');e.x=p.x;e.z=p.z-9;
+ e.lungeCooldown=0;
+ const before=e.z;
+ step(.05);
+ assert.equal(e.lunge>0,true,'runner should perform close-range lunge');
+ assert(e.z-before>.32,'chase surge should noticeably move runner toward player');
+ assert(e.z-before<.42,'server speed cannot teleport through geometry');
+ assert.equal(room.snapshot().enemies.find(x=>x.id===e.id).rush,true);
+ assert.equal(WAVE_CONFIG.reduce((a,w)=>a+w.walker+w.runner+w.brute,0),194);
 });
