@@ -52,7 +52,7 @@ test('Five balanced waves and no duplicate brute boss',()=>{
 test('Enemies have GPU resource disposal and audio uses a reusable buffer pool',()=>{
   assert(js.includes('function disposeEnemyGroup(z){'));
   assert(js.includes('geometries.forEach(g=>g.dispose'));
-  assert(js.includes('disposeEnemyGroup(z);return false'));
+  assert(js.includes('if(t>=ZOMBIE_DEATH_END){\n  disposeEnemyGroup(z);\n  return false;'));
   assert(js.includes('this.noiseCache=new Map()'));
 });
 test('AI textures are local WebP and fit 750 KB budget',()=>{
