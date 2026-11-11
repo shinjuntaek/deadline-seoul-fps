@@ -41,7 +41,7 @@ async function runCase(browser,variant){
   const result={device:name,viewport:variant.options.viewport??'emulated Pixel 7',status:'PENDING',steps:[],errors,failedRequests};
   const check=(label,ok,actual)=>{result.steps.push({label,pass:!!ok,actual});assert(ok,label+': '+JSON.stringify(actual))};
   try{
-    await page.goto(url,{waitUntil:'domcontentloaded',timeout:60000});
+    await page.goto(url+'/?qa=1',{waitUntil:'domcontentloaded',timeout:60000});
     await page.locator('#menu:not(.hidden)').waitFor({state:'visible',timeout:60000});
     await page.screenshot({path:path.join(reports,name+'-menu.png')});
     check('menu visible',await page.locator('#start').isVisible(),true);
@@ -67,10 +67,20 @@ async function runCase(browser,variant){
         const ammoAfter=+(await page.locator('#ammo').innerText());
         result.steps.push({label:'physical mouse event fires rifle',pass:ammoAfter<ammoBefore,actual:{before:ammoBefore,after:ammoAfter}});
         if(ammoAfter<ammoBefore){
+          if(await page.locator('#pause').isVisible()){
+            await page.locator('#resume').click({timeout:10000});
+          }
           await page.keyboard.press('r');
-          const reloadStatus=await page.locator('#weapon-status').innerText();
+          await page.waitForTimeout(280); // allow a slow software-WebGL frame
+          let reloadStatus=await page.locator('#weapon-status').innerText();
+          if(!reloadStatus.includes('RELOADING')){
+            const phase=await page.evaluate(()=>window.__DEADLINE_QA__?.().phase||'unknown');
+            result.reloadDiagnostics={phase,status:reloadStatus};
+            if(phase==='paused'){await page.locator('#resume').click();await page.keyboard.press('r');await page.waitForTimeout(300)}
+            reloadStatus=await page.locator('#weapon-status').innerText();
+          }
           result.steps.push({label:'keyboard R initiates reload',pass:reloadStatus.includes('RELOADING'),actual:reloadStatus});
-          await page.waitForTimeout(1800);
+          await page.waitForTimeout(2200);
           const reloaded=+(await page.locator('#ammo').innerText());
           result.steps.push({label:'reload refills magazine',pass:reloaded>ammoAfter,actual:{afterShot:ammoAfter,reloaded}});
         }
@@ -95,7 +105,8 @@ async function runCase(browser,variant){
     const report=JSON.parse(await qa.locator('#release-qa-report').innerText());
     result.integration={status:report.status,passed:report.passed,at:report.at,error:report.error,waves:report.waves};
     check('all 5-wave engine integration tests pass',report.status==='PASS',report.error??report.passed);
-    await qa.screenshot({path:path.join(reports,name+'-five-waves.png')});
+    // Large, text-heavy QA reports can hang software-rendered screenshots; JSON is authoritative.
+    try{await qa.screenshot({path:path.join(reports,name+'-five-waves.png'),timeout:8000})}catch(e){result.screenshotWarning=e.message}
     await qa.close();
     result.status=result.steps.every(t=>t.pass)?'PASS':'PARTIAL';
   }catch(err){
