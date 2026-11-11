@@ -12,6 +12,10 @@ on:
       - "package.json"
       - ".github/workflows/browser-smoke.yml"
 
+concurrency:
+  group: deadline-seoul-browser-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
