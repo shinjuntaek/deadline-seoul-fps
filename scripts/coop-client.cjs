@@ -383,6 +383,9 @@ edit("function menu(){phase='menu';","function menu(){if(coop.active||coop.ws)co
 edit("dom.restart.addEventListener('click',startRun);",
 "dom.restart.addEventListener('click',e=>{if(coop.ended){e.stopImmediatePropagation();coopDisconnect();menu();coopOpenPanel();return}startRun()});",
 'co-op restart must not accidentally initialize local battle');
+edit("hold(dom['touch-fire'],()=>fireHeld=true,()=>fireHeld=false);",
+"hold(dom['touch-fire'],()=>{fireHeld=true;if(phase==='playing')shoot(performance.now())},()=>fireHeld=false);",
+'very short mobile tap must fire immediately');
 const css=String.raw`
 /* Four-player room UI; all dynamic names use textContent, never raw HTML. */
 .coop-launch{background:#2a5552!important;border:1px solid #6ccfb0!important;color:#e2fff0!important;margin-top:11px;letter-spacing:.02em}
