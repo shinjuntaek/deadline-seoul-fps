@@ -1,0 +1,98 @@
+/**
+ * Preview-only integration regression runner and on-device FPS benchmark.
+ * This is an additive build-time patch. It NEVER runs in ordinary gameplay.
+ */
+'use strict';
+const fs=require('node:fs'),path=require('node:path'),cp=require('node:child_process');
+const dist=path.resolve(__dirname,'..','dist');
+const srcPath=path.join(dist,'game.js');
+let js=fs.readFileSync(srcPath,'utf8');
+const marker="setLoading(100,'작전 준비 완료');";
+if(js.split(marker).length!==2)throw new Error('QA integration marker must be unique');
+const inject=[
+"/* QA release integration. Explicit opt-in only; never run during regular play. */",
+"const qaParams=new URLSearchParams(location.search);",
+"const releaseQa=qaParams.get('qa')==='release'&&location.hostname.endsWith('.vercel.app');",
+"const benchQa=qaParams.get('benchmark')==='1';",
+"let qaPanel=null;",
+"function qaPanelCreate(){",
+" if(qaPanel)return qaPanel;",
+" qaPanel=document.createElement('pre');qaPanel.id='release-qa-report';",
+" Object.assign(qaPanel.style,{position:'fixed',top:'12px',left:'12px',right:'12px',bottom:'auto',maxHeight:'85vh',overflow:'auto',zIndex:'300',whiteSpace:'pre-wrap',wordBreak:'break-word',font:'12px/1.45 monospace',color:'#c7ffe3',background:'rgba(1,9,12,.96)',padding:'16px',border:'1px solid #277b6a',userSelect:'text',pointerEvents:'auto'});",
+" document.body.appendChild(qaPanel);return qaPanel;",
+"}",
+"function qaReport(data){window.__DEADLINE_RELEASE_QA__=data;qaPanelCreate().textContent=JSON.stringify(data,null,2)}",
+"function runReleaseQA(){",
+" const tests=[];let last='initial';",
+" function check(name,condition,actual){last=name;const ok=!!condition;tests.push({name,pass:ok,value:actual===undefined?null:actual});if(!ok)throw new Error(name+' failed: '+JSON.stringify(actual));}",
+" try{",
+"  startRun();check('Start enters playing mode',phase==='playing',{phase,wave:stats.wave});",
+"  check('WAVE 1 configured',stats.wave===1&&spawnQueue.length===7,{wave:stats.wave,queued:spawnQueue.length});",
+"  const rifle=weaponState.rifle,beforeAmmo=rifle.ammo;",
+"  shoot(performance.now()+1000);check('Real shoot() decrements magazine',rifle.ammo===beforeAmmo-1,{beforeAmmo,afterAmmo:rifle.ammo,shots:stats.shots});",
+"  const reserve=rifle.reserve;",
+"  reload();check('Reload starts with empty magazine space',rifle.reloading===true,{reloading:rifle.reloading});",
+"  updateWeapon(.016,rifle.reloadAt+rifle.cfg.reload*1000+10,false,false);",
+"  check('Reload completes and spends reserve',!rifle.reloading&&rifle.ammo===rifle.cfg.mag&&rifle.reserve===reserve-1,{ammo:rifle.ammo,reserve:rifle.reserve});",
+"  const prevHealth=health,prevArmor=armor;",
+"  lastDamage=-99;takeDamage(20);",
+"  check('Real takeDamage reduces health and armor',health<prevHealth&&armor<prevArmor,{health,armor});",
+"  const target=createEnemy('walker',new THREE.Vector3(camera.position.x,camera.position.y-PLAYER.height,camera.position.z+4));",
+"  const head=target.head.getWorldPosition(new THREE.Vector3()),direction=head.clone().sub(camera.position).normalize();",
+"  raycaster.set(camera.position,direction);",
+"  const hit=raycaster.intersectObject(target.head,true)[0];",
+"  check('Real 3D head hitbox raycast resolves',!!hit&&hit.object.userData.part==='head',{part:hit?.object?.userData?.part||null});",
+"  const firstHP=target.hp;",
+"  camera.lookAt(head);aimBlend=1;rifle.next=0;",
+"  shoot(performance.now()+2000);",
+"  check('Live shoot raycasts against enemy body',target.hp<firstHP,{hpBefore:firstHP,hpAfter:target.hp,hits:stats.hits});",
+"  if(!target.dead){const killed=enemyDamage(target,9999,true);if(killed)killEnemy(target,true)}",
+"  disposeEnemyGroup(target);enemies.splice(enemies.indexOf(target),1);",
+"  const waveSummaries=[];",
+"  for(let wi=0;wi<waves.length;wi++){",
+"    check('Correct wave index '+(wi+1),waveIndex===wi&&stats.wave===wi+1,{waveIndex,statWave:stats.wave});",
+"    let created=0,bosses=0;",
+"    while(spawnQueue.length){",
+"      const pending=spawnQueue.length;director(10);",
+"      check('Director spawns exactly one infected',spawnQueue.length===pending-1,{pending,after:spawnQueue.length});",
+"      const z=enemies.find(e=>!e.dead);",
+"      check('Director registers enemy',!!z,{wave:wi+1,spawn:created});",
+"      created++;if(z.kind==='brute')bosses++;",
+"      if(enemyDamage(z,99999,true))killEnemy(z,true);",
+"      disposeEnemyGroup(z);enemies.splice(enemies.indexOf(z),1);",
+"    }",
+"    const expected=waves[wi].walkers+waves[wi].runners+waves[wi].brutes;",
+"    check('Wave enemy count '+(wi+1),created===expected,{created,expected});",
+"    check('Wave boss count '+(wi+1),bosses===waves[wi].brutes,{bosses,expected:waves[wi].brutes});",
+"    waveSummaries.push({wave:wi+1,created,bosses});",
+"    director(.016);",
+"    if(wi<waves.length-1)director(10);",
+"  }",
+"  check('Extraction unlocks after five waves',extraction.visible&&waveIndex===waves.length,{extract:extraction.visible,waveIndex});",
+"  camera.position.set(extraction.position.x,PLAYER.height,extraction.position.z);",
+"  updateExtraction(7.1);",
+"  check('Extraction victory ending completes',phase==='victory',{phase,score:stats.score,kills:stats.kills});",
+"  qaReport({status:'PASS',kind:'simulated integration exercising game-engine functions (not human playthrough)',passed:tests.filter(x=>x.pass).length,tests,waves:waveSummaries,summary:{score:stats.score,kills:stats.kills,headshots:stats.headshots,shots:stats.shots,hits:stats.hits},notes:'Does not prove mouse physical inputs, real player movement, nor sustained GPU frame rate.'});",
+" }catch(e){qaReport({status:'FAIL',at:last,error:e.message,tests,phase,stats:{...stats}});console.error('RELEASE_QA_FAILURE',e)}",
+"}",
+"function launchDeviceBenchmark(){",
+" startRun();const samples=[],started=performance.now();let last=started;",
+" const endTime=started+20000;qaPanelCreate().textContent='FRAME-TIME / FPS BENCHMARK\\nWARMUP 4s / SAMPLE 16s\\nDevice '+navigator.userAgent;",
+" function tick(now){",
+"  const delta=now-last;last=now;if(now-started>4000&&delta>0&&delta<2000)samples.push(delta);",
+"  if(now<endTime&&phase==='playing'){requestAnimationFrame(tick);return}",
+"  const sorted=samples.slice().sort((a,b)=>a-b);",
+"  const percentile=q=>sorted[Math.min(sorted.length-1,Math.max(0,Math.floor(q*(sorted.length-1))))];",
+"  const avg=samples.reduce((a,b)=>a+b,0)/Math.max(1,samples.length);",
+"  const result={status:samples.length>120?'PASS':'INCOMPLETE',kind:'actual browser requestAnimationFrame timing',userAgent:navigator.userAgent,deviceMemory:navigator.deviceMemory??null,hardwareConcurrency:navigator.hardwareConcurrency??null,dpr:devicePixelRatio,width:innerWidth,height:innerHeight,frames:samples.length,avgFPS:Math.round(1000/avg*10)/10,p50FrameMs:+(percentile(.50)||0).toFixed(1),p95FrameMs:+(percentile(.95)||0).toFixed(1),p99FrameMs:+(percentile(.99)||0).toFixed(1),onePercentLowFPS:Math.round(1000/Math.max(1,percentile(.99))*10)/10,webglContext:!!renderer.getContext(),quality,renderScale};",
+"  window.__DEADLINE_BENCHMARK__=result;qaPanelCreate().textContent=JSON.stringify(result,null,2);",
+" }",
+" requestAnimationFrame(tick);",
+"}",
+"if(releaseQa)setTimeout(runReleaseQA,900);",
+"if(benchQa)setTimeout(launchDeviceBenchmark,900);"
+].join('\n');
+js=js.replace(marker,inject+'\n'+marker);
+cp.execFileSync(process.execPath,['--check'],{input:js,encoding:'utf8'}); // parse on stdin
+fs.writeFileSync(srcPath,js);
+console.log('RELEASE_QA_INJECTED',JSON.stringify({bytes:Buffer.byteLength(js),release:true,benchmark:true,previewGated:true}));
