@@ -1,9 +1,9 @@
 {
   "name": "deadline-seoul-zombie-fps",
   "private": true,
-  "version": "1.0.0-rc.14",
+  "version": "1.0.0-rc.15",
   "scripts": {
-    "build": "npm run test:coop && node scripts/recover-release.cjs && node scripts/prepare-assets.cjs && node scripts/patch-game.cjs && node scripts/graphics-upgrade.cjs && node scripts/perf-adaptive.cjs && node scripts/environment-realism.cjs && node scripts/environment-props.cjs && node scripts/dense-waves.cjs && node scripts/enemy-speed.cjs && node scripts/integration-qa.cjs && node scripts/coop-client.cjs && node scripts/verify-release.cjs && node scripts/build-og-image.cjs",
+    "build": "npm run test:coop && node scripts/recover-release.cjs && node scripts/prepare-assets.cjs && node scripts/patch-game.cjs && node scripts/graphics-upgrade.cjs && node scripts/perf-adaptive.cjs && node scripts/environment-realism.cjs && node scripts/environment-props.cjs && node scripts/dense-waves.cjs && node scripts/enemy-speed.cjs && node scripts/integration-qa.cjs && node scripts/coop-client.cjs && node scripts/horror-intensity.cjs && node scripts/verify-release.cjs && node scripts/build-og-image.cjs",
     "test": "npm run build",
     "test:coop": "node --test multiplayer/coop-engine.test.mjs multiplayer/coop-ws.test.mjs multiplayer/coop-latency.test.mjs"
   },
