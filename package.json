@@ -1,8 +1,19 @@
 {
   "name": "deadline-seoul-zombie-fps",
   "private": true,
-  "version": "1.0.0-rc.2",
+  "version": "1.0.0-rc.14",
   "scripts": {
-    "build": "rm -rf dist .release && mkdir -p dist .release && for f in release/lean.b64.part-*; do echo Decoding $f; base64 -d $f >> .release/release.tar.gz; done && tar -xzf .release/release.tar.gz -C dist"
-  }
+    "build": "npm run test:coop && node scripts/recover-release.cjs && node scripts/prepare-assets.cjs && node scripts/patch-game.cjs && node scripts/graphics-upgrade.cjs && node scripts/perf-adaptive.cjs && node scripts/environment-realism.cjs && node scripts/environment-props.cjs && node scripts/dense-waves.cjs && node scripts/enemy-speed.cjs && node scripts/integration-qa.cjs && node scripts/coop-client.cjs && node scripts/verify-release.cjs && node scripts/build-og-image.cjs",
+    "test": "npm run build",
+    "test:coop": "node --test multiplayer/coop-engine.test.mjs multiplayer/coop-ws.test.mjs multiplayer/coop-latency.test.mjs"
+  },
+  "dependencies": {
+    "three": "0.164.1",
+    "sharp": "0.34.4",
+    "ws": "8.18.3"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "type": "module"
 }

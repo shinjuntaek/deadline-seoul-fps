@@ -1,0 +1,76 @@
+name: DEADLINE SEOUL browser smoke QA
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+    paths:
+      - "scripts/**"
+      - "api/**"
+      - "multiplayer/**"
+      - "assets/**"
+      - "release/**"
+      - "package.json"
+      - ".github/workflows/browser-smoke.yml"
+
+concurrency:
+  group: deadline-seoul-browser-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  browser-qa:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout this PR commit
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install runtime and QA browser
+        run: |
+          npm install --ignore-scripts --no-audit
+          npm install --no-save playwright@1.56.1 --no-audit --ignore-scripts
+          npx playwright install --with-deps chromium
+
+      - name: Recover source and build all optimized game assets
+        run: npm run build
+
+      - name: Start local real WebSocket and game server
+        run: |
+          node scripts/coop-dev-server.mjs > /tmp/deadline-browser-qa.log 2>&1 &
+          echo $! > /tmp/deadline-browser-qa.pid
+          for n in $(seq 1 30); do
+            curl -fsS http://127.0.0.1:4173/ > /dev/null && exit 0
+            sleep 1
+          done
+          cat /tmp/deadline-browser-qa.log
+          exit 1
+
+      - name: Two-player browser and actual server co-op integration
+        env:
+          GAME_BASE_URL: http://127.0.0.1:4173
+        run: node scripts/browser-coop.cjs
+
+      - name: Real Chromium input tests and mobile-viewport emulation
+        env:
+          GAME_BASE_URL: http://127.0.0.1:4173
+        run: node scripts/browser-smoke.cjs
+
+      - name: Upload QA report and screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: deadline-seoul-browser-qa
+          path: |
+            browser-qa/
+            dist/static-qa-report.json
+            dist/qa-report.json
+          if-no-files-found: warn
