@@ -30,7 +30,7 @@ const cleanName=s=>String(s||'생존자').replace(/[\u0000-\u001f\u007f<>]/g,'')
 const deviate=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
 const obstacleAABBs=[
  ...[[-5.8,-26],[5.8,-18],[-5.5,10],[5.9,27],[-16.2,-6],[16.5,-33],[-16.4,42]].map(([x,z])=>({x,z,w:4.05,d:2})),
- ...[-38,34].flatMap((z,row)=>Array.from({length:7},(_,i)=>i-3).filter(i=>i!==(row===0?1:-1)).map(i=>({x:i*2.9,z,w:2.6,d:.7}))),
+ ...[-38,34].flatMap((z,row)=>Array.from({length:7},(_,i)=>i-3).filter(i=>Math.abs(i)===3).map(i=>({x:i*2.9,z,w:2.6,d:.7}))),
  {x:-14.9,z:-45,w:2.85,d:8.25},
  {x:-15.5,z:-23,w:8,d:8},{x:15.5,z:21,w:8,d:9},
 ];
