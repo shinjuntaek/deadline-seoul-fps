@@ -1,9 +1,9 @@
 {
   "name": "deadline-seoul-zombie-fps",
   "private": true,
-  "version": "1.0.0-rc.11",
+  "version": "1.0.0-rc.12",
   "scripts": {
-    "build": "node scripts/recover-release.cjs && node scripts/prepare-assets.cjs && node scripts/patch-game.cjs && node scripts/graphics-upgrade.cjs && node scripts/perf-adaptive.cjs && node scripts/dense-waves.cjs && node scripts/enemy-speed.cjs && node scripts/integration-qa.cjs && node scripts/verify-release.cjs",
+    "build": "node scripts/recover-release.cjs && node scripts/prepare-assets.cjs && node scripts/patch-game.cjs && node scripts/graphics-upgrade.cjs && node scripts/perf-adaptive.cjs && node scripts/environment-realism.cjs && node scripts/environment-props.cjs && node scripts/dense-waves.cjs && node scripts/enemy-speed.cjs && node scripts/integration-qa.cjs && node scripts/verify-release.cjs",
     "test": "npm run build"
   },
   "dependencies": {
