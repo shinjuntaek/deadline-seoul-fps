@@ -93,6 +93,25 @@ async function runCase(browser,variant){
       const ammoAfter=+(await page.locator('#ammo').innerText());
       result.steps.push({label:'touch FIRE decreases ammo',pass:ammoAfter<ammoBefore,actual:{before:ammoBefore,after:ammoAfter}});
     }
+    // Quantitative rAF timing: explicitly classified as software-rendered
+    // browser viewport emulation, never a physical Android measurement.
+    result.performance=await page.evaluate(()=>new Promise(resolve=>{
+      const start=performance.now(),deltas=[];let last=null;
+      function sample(now){
+        if(last!==null&&now-last>0&&now-last<1500)deltas.push(now-last);
+        last=now;
+        if(now-start<3500){requestAnimationFrame(sample);return}
+        const sorted=deltas.slice().sort((a,b)=>a-b);
+        const avg=deltas.reduce((a,b)=>a+b,0)/Math.max(1,deltas.length);
+        const p=q=>sorted[Math.min(sorted.length-1,Math.floor(q*(sorted.length-1)))]||0;
+        resolve({sampleDurationMs:Math.round(now-start),frames:deltas.length,
+          avgFPS:+(1000/Math.max(1,avg)).toFixed(1),
+          p95FrameMs:+p(.95).toFixed(1),p99FrameMs:+p(.99).toFixed(1),
+          viewport:{w:innerWidth,h:innerHeight,dpr:devicePixelRatio},
+          measuredOn:'GitHub Actions headless Chromium, software WebGL; NOT physical mobile GPU'});
+      }
+      requestAnimationFrame(sample);
+    }));
     // Fast engine-driven 5-wave verification runs in an isolated page,
     // expressly not represented as a natural human playthrough.
     const qa=await context.newPage();
