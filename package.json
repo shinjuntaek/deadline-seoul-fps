@@ -1,13 +1,14 @@
 {
   "name": "deadline-seoul-zombie-fps",
   "private": true,
-  "version": "1.0.0-rc.4",
+  "version": "1.0.0-rc.5",
   "scripts": {
     "build": "node scripts/recover-release.cjs",
     "test": "npm run build && node --check dist/game.js"
   },
   "dependencies": {
-    "three": "0.164.1"
+    "three": "0.164.1",
+    "sharp": "0.34.4"
   },
   "engines": {
     "node": ">=20"
