@@ -12,7 +12,7 @@ function edit(before,after,why){
  if(parts.length!==2)throw new Error(why+' expected exactly once; found '+(parts.length-1));
  js=parts.join(after);
 }
-const multiplayer=String.raw`
+let multiplayer=String.raw`
 /* ===== DEADLINE: SEOUL COOPERATIVE MODE (OPT-IN) ===== */
 const coop={
  ws:null,active:false,ended:false,playerId:null,token:null,code:null,lobby:null,roomInfo:null,
@@ -24,6 +24,8 @@ function coopSocketSend(data){if(coop.ws&&coop.ws.readyState===WebSocket.OPEN)co
 function coopText(selector,msg){const el=coop.lobby&&coop.lobby.querySelector(selector);if(el)el.textContent=String(msg)}
 function coopMsg(msg){coopText('#coop-message',msg)}
 function coopURL(){
+ const dedicated='__COOP_SERVER_URL__';
+ if(dedicated)return dedicated;
  const here=new URL(location.href),q=new URLSearchParams();
  if(here.searchParams.get('_vercel_share'))q.set('_vercel_share',here.searchParams.get('_vercel_share'));
  return (location.protocol==='https:'?'wss://':'ws://')+location.host+'/api/multiplayer'+(q.size?'?'+q.toString():'');
@@ -368,6 +370,10 @@ function coopStartUI(){
 coopStartUI();
 /* ===== END COOP ===== */
 `;
+const selectedEndpoint=String(process.env.COOP_SERVER_URL||'').trim();
+if(selectedEndpoint&&!/^wss:\/\/[a-z0-9.-]+(?::443)?\/api\/multiplayer\/?$/i.test(selectedEndpoint))
+ throw Error('COOP_SERVER_URL must be the dedicated secure WebSocket endpoint');
+multiplayer=multiplayer.replace("'__COOP_SERVER_URL__'",JSON.stringify(selectedEndpoint));
 edit('function frame(){',multiplayer+'\nfunction frame(){','insert cooperative UI and state bridge');
 edit('function shoot(now){',"function shoot(now){if(coop.active){coopShoot(now);return}",'co-op authoritative shot');
 edit('function reload(){',"function reload(){if(coop.active){coopReload();return}",'co-op authoritative reload');
