@@ -1,6 +1,13 @@
 name: DEADLINE SEOUL browser smoke QA
 on:
   workflow_dispatch:
+  push:
+    branches: [feat/scarier-faster-infected-20261111]
+    paths:
+      - "scripts/**"
+      - "multiplayer/**"
+      - "package.json"
+      - ".github/workflows/browser-smoke.yml"
   pull_request:
     branches: [main]
     paths:
