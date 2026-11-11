@@ -27,7 +27,7 @@ const inject=[
 " function check(name,condition,actual){last=name;const ok=!!condition;tests.push({name,pass:ok,value:actual===undefined?null:actual});if(!ok)throw new Error(name+' failed: '+JSON.stringify(actual));}",
 " try{",
 "  startRun();check('Start enters playing mode',phase==='playing',{phase,wave:stats.wave});",
-"  check('WAVE 1 configured',stats.wave===1&&spawnQueue.length===7,{wave:stats.wave,queued:spawnQueue.length});",
+"  check('WAVE 1 configured',stats.wave===1&&spawnQueue.length===14,{wave:stats.wave,queued:spawnQueue.length});",
 "  const firstZ=camera.position.z;",
 "  window.dispatchEvent(new KeyboardEvent(\'keydown\',{code:\'KeyW\',key:\'w\',bubbles:true}));",
 "  updatePlayer(.25);",
