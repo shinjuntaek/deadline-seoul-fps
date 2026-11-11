@@ -1,8 +1,8 @@
 {
   "name": "deadline-seoul-zombie-fps",
   "private": true,
-  "version": "1.0.0-beta.3",
+  "version": "1.0.0-rc.1",
   "scripts": {
-    "build": "rm -rf dist .release && mkdir -p dist .release && cat release/source.b64.part-* | base64 -d > .release/source.tar.gz && tar -xzf .release/source.tar.gz -C dist"
+    "build": "rm -rf dist .release && mkdir -p dist .release && cat release/lean.b64.part-* | base64 -d > .release/release.tar.gz && tar -xzf .release/release.tar.gz -C dist"
   }
 }
