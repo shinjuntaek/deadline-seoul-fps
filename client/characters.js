@@ -1,5 +1,5 @@
 /* Skinned CC0 anatomy, shared geometry/materials and bounded near-detail budget. */
-const humanAssets={templates:{},ready:false,error:null,nearBudget:quality==='low'?3:8};
+const humanAssets={templates:{},materials:new Map(),ready:false,error:null,nearBudget:quality==='low'?3:8};
 let cloneHuman=null;
 const legacyCreateEnemy=createEnemy,legacyDisposeEnemy=disposeEnemyGroup;
 const legacyPhotoSkin=applyPhotographicZombieSkin,legacyDeath=updateZombieDeath;
@@ -11,7 +11,12 @@ Promise.all([import('/vendor/GLTFLoader.js'),import('/vendor/SkeletonUtils.js')]
  const gltfLoader=new loader.GLTFLoader();
  await Promise.all(['infected-civilian','infected-worker'].flatMap(model=>['far','near'].map(async lod=>{
   const asset=await gltfLoader.loadAsync('/assets/models/'+model+'-'+lod+'.glb');
-  asset.scene.traverse(o=>{if(o.isMesh){o.frustumCulled=false;o.raycast=()=>{};o.material.side=THREE.FrontSide;o.material.vertexColors=!!o.geometry.attributes.color;o.material.needsUpdate=true}});
+  asset.scene.traverse(o=>{if(o.isMesh){
+   const key=model+o.material.name,cached=humanAssets.materials.get(key);
+   if(cached){const old=o.material;if(old.map&&old.map!==cached.map)old.map.dispose();o.material=cached;old.dispose()}
+   else{humanAssets.materials.set(key,o.material);o.material.normalMap=concrete.normalMap||null;o.material.normalScale.set(.07,.07)}
+   o.frustumCulled=false;o.raycast=()=>{};o.material.side=THREE.FrontSide;o.material.vertexColors=!!o.geometry.attributes.color;o.material.needsUpdate=true;
+  }});
   humanAssets.templates[model+'-'+lod]=asset.scene;
  })));
  humanAssets.ready=true;

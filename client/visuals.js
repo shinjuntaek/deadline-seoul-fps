@@ -43,6 +43,20 @@ for(const x of [-10.7,10.7])for(const z of [-36,-12,12,36]){
 poolMesh.instanceMatrix.needsUpdate=true;poolMesh.frustumCulled=false;scene.add(poolMesh);
 // A light mist layer is quality-gated: four cheap cards, never a full-screen post-process.
 const mist=[];
+// Merge only immutable detail owned by envRoot; gameplay collision meshes remain intact.
+import('/vendor/BufferGeometryUtils.js').then(({mergeGeometries})=>{
+ envRoot.updateMatrixWorld(true);const batches=new Map();
+ for(const mesh of [...envRoot.children])if(mesh.isMesh&&!mesh.isInstancedMesh&&!Array.isArray(mesh.material)){
+  const batch=batches.get(mesh.material)||[];batch.push(mesh);batches.set(mesh.material,batch);
+ }
+ for(const [material,meshes] of batches){
+  if(meshes.length<3)continue;
+  const parts=meshes.map(m=>m.geometry.clone().applyMatrix4(m.matrixWorld));
+  const geo=mergeGeometries(parts,false);parts.forEach(g=>g.dispose());if(!geo)continue;
+  const combined=new THREE.Mesh(geo,material);combined.castShadow=quality!=='low';combined.receiveShadow=true;scene.add(combined);
+  const released=new Set();for(const m of meshes){envRoot.remove(m);if(!released.has(m.geometry)){released.add(m.geometry);m.geometry.dispose()}}
+ }
+}).catch(e=>console.warn('Static detail batching unavailable',e));
 if(!ultraLow&&quality!=='low'){
  const material=new THREE.MeshBasicMaterial({map:poolTex,color:0x6c92a0,transparent:true,opacity:.055,depthWrite:false,side:THREE.DoubleSide});
  for(let i=0;i<4;i++){

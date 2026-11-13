@@ -15,6 +15,8 @@ const check=(name,pass,detail)=>{report.checks.push({name,pass,detail});assert(p
   const before=await page.evaluate(()=>window.__DEADLINE_PLAYTEST__.state());
   check('Two skinned types are present in actual combat',before.art.skinned===5,before.art);
   await page.screenshot({path:path.join(out,'skinned-combat-before-shooting.png')});
+  await page.waitForTimeout(1000);const walking=await page.evaluate(()=>window.__DEADLINE_PLAYTEST__.state());
+  check('Skeleton pose changes during pursuit',!!before.rig&&!!walking.rig&&JSON.stringify(before.rig)!==JSON.stringify(walking.rig),{before:before.rig,after:walking.rig});
   await page.evaluate(()=>window.__DEADLINE_PLAYTEST__.aimAtEnemy());
   await page.mouse.down();await page.waitForTimeout(350);await page.mouse.up();
   await page.waitForFunction(()=>window.__DEADLINE_PLAYTEST__.state().ammo<30,null,{timeout:10000});
@@ -24,7 +26,6 @@ const check=(name,pass,detail)=>{report.checks.push({name,pass,detail});assert(p
   await page.evaluate(()=>window.__DEADLINE_PLAYTEST__.bot(true));
   await page.waitForTimeout(18000);
   const after=await page.evaluate(()=>window.__DEADLINE_PLAYTEST__.state());
-  check('Skeleton pose changes during pursuit',JSON.stringify(before.rig)!==JSON.stringify(after.rig),{before:before.rig,after:after.rig});
   check('Damage or kills resolve through live combat',after.kills>0||after.health<100,after);
   check('Near detail remains bounded',after.art.near<=10,after.art);
   check('No browser JavaScript errors',report.errors.length===0,report.errors);

@@ -94,7 +94,7 @@ async function runCase(browser,variant){
       check('touch controls visible',await page.locator('#touch').isVisible(),true);
       check('touch fire available',await page.locator('#touch-fire').isVisible(),true);
       await page.locator('#touch-fire').tap({timeout:5000});
-      await page.waitForTimeout(150);
+      await page.waitForFunction(previous=>Number(document.querySelector('#ammo').textContent)<previous,ammoBefore,{timeout:10000});
       const ammoAfter=+(await page.locator('#ammo').innerText());
       result.steps.push({label:'touch FIRE decreases ammo',pass:ammoAfter<ammoBefore,actual:{before:ammoBefore,after:ammoAfter}});
     }
