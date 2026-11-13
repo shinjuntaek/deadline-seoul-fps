@@ -1,6 +1,7 @@
 const perfLog={samples:[],contextLosses:0,frames:[],start:performance.now(),last:performance.now(),contextLost:false};
 window.__DEADLINE_PERFORMANCE__=()=>({build:'stability-visuals-20261113',gpu:gpuRendererName,softwareGPU,quality,
  dimensions:{width:dom.game.width,height:dom.game.height},contextLosses:perfLog.contextLosses,
+ view:{yaw,pitch,x:camera.position.x,y:camera.position.y,z:camera.position.z,cameraPitch:camera.rotation.x},
  memoryKind:'JS heap when supported; renderer counts are not GPU bytes',samples:perfLog.samples.slice()});
 function capturePerformance(rawDt){
  const now=performance.now();perfLog.frames.push(rawDt*1000);if(perfLog.frames.length>300)perfLog.frames.shift();

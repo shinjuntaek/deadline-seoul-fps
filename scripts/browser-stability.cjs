@@ -11,6 +11,7 @@ const check=(name,condition,detail)=>{report.steps.push({name,pass:!!condition,d
   const a=await browser.newContext({viewport:{width:960,height:600}}),b=await browser.newContext({viewport:{width:640,height:420}});
   const host=await a.newPage(),guest=await b.newPage();
   for(const p of [host,guest])p.on('pageerror',e=>report.errors.push(e.message));
+  await host.addInitScript(()=>{window.__qaMouse=[];document.addEventListener('mousemove',e=>{window.__qaMouse.push({x:e.movementX,y:e.movementY,locked:!!document.pointerLockElement});if(window.__qaMouse.length>12)window.__qaMouse.shift()})});
   await Promise.all([host.goto(base),guest.goto(base)]);
   for(const p of [host,guest]){await p.locator('#coop-launch').waitFor({timeout:60000});await p.locator('#coop-launch').click()}
   await host.locator('#coop-name').fill('Host QA');await host.locator('#coop-create').click();
@@ -48,7 +49,10 @@ const check=(name,condition,detail)=>{report.steps.push({name,pass:!!condition,d
   await host.locator('#start').click();await host.waitForTimeout(3500);
   await host.screenshot({path:path.join(output,'seoul-medium-visual-qa.png')});
   report.visual=await host.evaluate(()=>window.__DEADLINE_PERFORMANCE__());
+  report.visualMouse=await host.evaluate(()=>window.__qaMouse);
   check('Medium lighting/material path renders',report.visual.quality==='medium');
+  check('Starting without look input keeps the camera level',Math.abs(report.visual.view.pitch)<.05,report.visual.view);
+  check('No unhandled JavaScript errors after medium render',report.errors.length===0,report.errors);
   report.status='PASS';
  }catch(error){report.status='FAIL';report.failure=error.stack;throw error}
  finally{fs.writeFileSync(path.join(output,'stability-report.json'),JSON.stringify(report,null,2));await browser.close()}
