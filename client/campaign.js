@@ -19,6 +19,8 @@ const campaignPalette={
  tyre:new THREE.MeshStandardMaterial({color:0x13191b,roughness:.98}),
  water:new THREE.MeshStandardMaterial({color:0x172d37,metalness:.6,roughness:.23}),
 };
+// Software rasterizers retain route readability with a cheaper lighting model.
+if(ultraLow)for(const key of Object.keys(campaignPalette)){const m=campaignPalette[key];if(m.isMeshStandardMaterial){campaignPalette[key]=new THREE.MeshLambertMaterial({color:m.color,map:m.map,emissive:m.emissive});m.dispose()}}
 function makeCampaignWorld(){
  if(campaignWorld)return;
  campaignWorld=new THREE.Group();campaignWorld.name='SEOUL ESCAPE · 340m connected route';scene.add(campaignWorld);
@@ -30,7 +32,7 @@ function makeCampaignWorld(){
  }
  function sign(g,text,x,y,z,w=6,h=1,sub='서울 비상 대피 경로',color='#a6dfbc',ry=0){
   const texture=signTexture(text,color,sub);
-  const mesh=new THREE.Mesh(new THREE.PlaneGeometry(w,h),new THREE.MeshStandardMaterial({map:texture,emissiveMap:texture,emissive:0xffffff,emissiveIntensity:.5,roughness:.7,side:THREE.DoubleSide}));
+  const mesh=new THREE.Mesh(new THREE.PlaneGeometry(w,h),(ultraLow?new THREE.MeshBasicMaterial({map:texture,side:THREE.DoubleSide}):new THREE.MeshStandardMaterial({map:texture,emissiveMap:texture,emissive:0xffffff,emissiveIntensity:.5,roughness:.7,side:THREE.DoubleSide})));
   mesh.position.set(x,y,z);mesh.rotation.y=ry;g.add(mesh);campaignTargets.push(mesh);
  }
  function lamp(g,x,y,z,warm=false){
@@ -124,6 +126,7 @@ function makeCampaignWorld(){
 }
 function campaignSetWorld(enabled){
  if(enabled)makeCampaignWorld();
+ hemi.intensity=enabled?1.18:(quality==='low'?1:.78);
  arenaObjects.forEach(o=>o.visible=enabled?false:arenaVisibility.get(o));
  if(campaignWorld)campaignWorld.visible=enabled;
  staticTargets.splice(0,staticTargets.length,...(enabled?campaignTargets:arenaTargets));
@@ -169,9 +172,9 @@ const arenaHUD=updateHUD;updateHUD=function(){
 };
 const arenaWorldUpdate=updateWorld;updateWorld=function(dt){
  arenaWorldUpdate(dt);if(selectedMode!=='campaign'||!campaignWorld)return;
- for(const g of campaignChunks)g.visible=Math.abs(camera.position.z-g.userData.center)<112;
+ for(const g of campaignChunks)g.visible=Math.abs(camera.position.z-g.userData.center)<(ultraLow?74:112);
  // At most four nearby fixed lights; no extra shadow maps along the longer route.
- const near=campaignLamps.slice().sort((a,b)=>a.position.distanceToSquared(camera.position)-b.position.distanceToSquared(camera.position)).slice(0,quality==='low'?2:4);
+ const near=campaignLamps.slice().sort((a,b)=>a.position.distanceToSquared(camera.position)-b.position.distanceToSquared(camera.position)).slice(0,ultraLow?0:quality==='low'?2:4);
  campaignLamps.forEach(l=>l.visible=near.includes(l));
  campaignGates.forEach(g=>{const open=g.stage<campaign.stage||(g.stage===campaign.stage&&['open','complete'].includes(campaign.status));g.left.position.x+=( (open?-9:-3)-g.left.position.x)*Math.min(1,dt*3);g.right.position.x+=((open?9:3)-g.right.position.x)*Math.min(1,dt*3);g.door.visible=Math.abs(g.left.position.x)<8.95||!open;g.area.material.opacity=g.stage===campaign.stage&&campaign.status==='regroup'?.22:.06});
  moon.position.set(camera.position.x-28,38,camera.position.z+18);moon.target.position.set(camera.position.x,0,camera.position.z);moon.target.updateMatrixWorld();
@@ -196,6 +199,7 @@ const originalCoopReceive=coopReceive;coopReceive=function(m){
  if(m.t==='campaign'){campaign={...m.campaign};campaignEvent(m.event);return}
  if(m.t==='state'&&m.campaign)campaign={...m.campaign};
  originalCoopReceive(m);
+ if(m.t==='lobby'&&m.mode==='campaign')coop.lobby.querySelector('h2').textContent='서울 탈출 캠페인 · 3개 연결 구역';
 };
 window.__DEADLINE_CAMPAIGN_STATUS__=()=>({mode:selectedMode,phase,campaign:{...campaign},position:{x:camera.position.x,z:camera.position.z},yaw,pitch,health,armor,ammo:stateWeapon().ammo,queued:spawnQueue.length,enemies:enemies.filter(e=>!e.dead).length,kills:stats.kills,quality,softwareGPU,gpu:gpuRendererName,width:innerWidth,height:innerHeight,renderScale,calls:renderer.info.render.calls,triangles:renderer.info.render.triangles,geometries:renderer.info.memory.geometries,textures:renderer.info.memory.textures,ws:coop.ws?.readyState??null,peers:coop.lastState?.players.map(p=>({id:p.id,x:p.x,z:p.z,connected:p.connected}))||[]});
 // Only loopback CI may drive deterministic stage states. No remote cheats in Preview.

@@ -20,7 +20,7 @@ try{
  await p.waitForTimeout(1800);await shot(p,'01-alley');await perf(p,'alley exploration');
  const gates=[-88,-198,-318],triggers=[-31,-139,-248];
  for(let i=0;i<3;i++){
-  await p.evaluate(z=>window.__CAMPAIGN_TEST__.position(0,z),triggers[i]-1);await p.waitForFunction(()=>window.__DEADLINE_CAMPAIGN_STATUS__().campaign.status==='combat');await p.waitForTimeout(2200);
+  await p.evaluate(z=>window.__CAMPAIGN_TEST__.position(0,z),triggers[i]-1);await p.waitForFunction(()=>window.__DEADLINE_CAMPAIGN_STATUS__().campaign.status==='combat');await p.waitForFunction(()=>window.__DEADLINE_CAMPAIGN_STATUS__().enemies>0,null,{timeout:30000});
   check('stage '+(i+1)+' movement trigger starts horde',(await state(p)).enemies>0,await state(p));
   await shot(p,'0'+(i+2)+'-stage-'+(i+1)+'-combat');
   if(i===0){
