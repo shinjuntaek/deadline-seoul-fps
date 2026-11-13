@@ -69,9 +69,13 @@ Existing BBANANA zombie cutouts remain in use. They are **not fully rigged 3D
 characters**, and this candidate is not claimed to match Left 4 Dead fidelity.
 New animated anatomical character meshes are the next visual gate.
 
-Plugin discovery found unconnected fal (3D assets) and Railway (persistent
-co-op host). Connection requires the user's account connection flow. Existing
+Plugin discovery connected fal (3D assets); Railway (persistent
+co-op host) is still awaiting account connection. Existing
 BBANANA offers Meshy 3D: 2K/4K texture + standard geometry 15 credits per model;
 8K or higher geometry 17.5 credits, both 20 credits. A 2K, PBR, 8–12k polygon
 infected model at 15 credits is proposed first, subject to the tool-required price
 confirmation. No paid generation was submitted and no subscription purchased.
+
+The fal Tripo H3.1 standard-texture 10k-face candidate submission was blocked by automatic approval review before a job ID was issued because its specific paid charge was not approved. No retry or charge was made. Official public pricing lists $0.20 for standard textures, excluding later rigging. Source: https://fal.ai/models/tripo3d/h3.1/text-to-3d
+
+Two-browser CI verified reload reconnect, then reproduced an unreachable close button at 640×420. The dialog now uses bounded internal scrolling instead of centering oversized content outside the viewport. Initial camera orientation is also set synchronously and faces the street, including after resume. Shared fabric textures are excluded from teammate cleanup.

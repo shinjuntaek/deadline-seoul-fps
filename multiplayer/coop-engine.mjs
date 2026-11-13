@@ -71,7 +71,7 @@ export class CoopRoom {
   if(this.playerCount>=this.maxPlayers)return{ok:false,error:'ROOM_FULL'};
   const id=seqId(),token=seqId(),i=this.playerCount;
   const p={id,token,clientId,name:cleanName(name),connected:true,ready:false,
-   x:(i%2?1:-1)*(1.5+i*.7),z:27+(i>=2?3:0),yaw:Math.PI,pitch:0,
+   x:(i%2?1:-1)*(1.5+i*.7),z:27+(i>=2?3:0),yaw:0,pitch:0,
    health:100,armor:50,stamina:100,downed:false,bleed:0,dead:false,revive:0,reviveTarget:null,
    weapon:'rifle',ammo:{rifle:30,shotgun:8},reserve:{rifle:180,shotgun:40},
    reloading:null,reloadDone:0,lastShot:0,lastInput:this.now(),lastMoveAt:this.now(),

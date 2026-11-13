@@ -33,7 +33,7 @@ function coopEnter(state,resumed=false){
  const top=document.getElementById('coop-topline');if(top)top.classList.remove('hidden');
  if(state){
   const me=state.players.find(p=>p.id===coop.playerId);
-  if(me){camera.position.x=me.x;camera.position.z=me.z;}
+  if(me){camera.position.x=me.x;camera.position.z=me.z;yaw=me.yaw;pitch=me.pitch;camera.rotation.set(pitch,yaw,0,'YXZ');}
   coop.lastState=state;coopApplySnapshot(state);
  }
 }

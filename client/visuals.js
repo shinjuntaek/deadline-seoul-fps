@@ -18,7 +18,7 @@ if(moon.castShadow){
  moon.shadow.mapSize.set(size,size);Object.assign(moon.shadow.camera,{left:-span,right:span,top:span,bottom:-span});
  moon.shadow.camera.updateProjectionMatrix();scene.add(moon.target);
 }
-hemi.intensity=quality==='low'?.82:.57;hemi.color.setHex(0x8da5b8);
+hemi.intensity=quality==='low'?1.05:.66;hemi.color.setHex(0x8da5b8);
 flashlight.color.setHex(0xeee7ce);flashlight.penumbra=.65;
 // One alpha texture, one instanced draw for local illuminated wet-road pools.
 const poolCanvas=document.createElement('canvas');poolCanvas.width=poolCanvas.height=64;

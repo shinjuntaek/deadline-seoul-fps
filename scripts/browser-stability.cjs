@@ -36,10 +36,19 @@ const check=(name,condition,detail)=>{report.steps.push({name,pass:!!condition,d
   check('Leaving restores create/join controls',await guest.locator('#coop-create').isVisible()&&await guest.locator('#coop-join').isVisible());
   await guest.locator('#coop-close').click();await guest.locator('#coop-launch').click();
   check('Reopening lobby has no stale share panel',await guest.locator('#coop-create').isVisible()&&!await guest.locator('#coop-copy').isVisible());
+  if(await host.locator('#resume').isVisible())await host.locator('#resume').click();
   await host.waitForTimeout(8000);
+  await host.screenshot({path:path.join(output,'stability-street-materials.png')});
   report.performance.push(await host.evaluate(()=>window.__DEADLINE_PERFORMANCE__()));
   check('Telemetry includes raw frame time and renderer counters',report.performance[0].samples.some(s=>s.p95FrameMs>0&&s.drawCalls>0));
   check('No unhandled JavaScript errors',report.errors.length===0,report.errors);
+  // Dedicated visual QA exercises medium shaders under software GL, without
+  // treating these settings or timings as a real GPU performance result.
+  await host.goto(base+'?qa=visual');await host.locator('#start').waitFor({timeout:60000});
+  await host.locator('#start').click();await host.waitForTimeout(3500);
+  await host.screenshot({path:path.join(output,'seoul-medium-visual-qa.png')});
+  report.visual=await host.evaluate(()=>window.__DEADLINE_PERFORMANCE__());
+  check('Medium lighting/material path renders',report.visual.quality==='medium');
   report.status='PASS';
  }catch(error){report.status='FAIL';report.failure=error.stack;throw error}
  finally{fs.writeFileSync(path.join(output,'stability-report.json'),JSON.stringify(report,null,2));await browser.close()}

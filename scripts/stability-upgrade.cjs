@@ -16,6 +16,7 @@ edit("if(m.t==='error'){","if(m.t==='error'){\n  if(coop.desiredAction==='resume
 edit("ready.disabled=!me;","ready.disabled=!me||info.phase!=='lobby';");
 edit("info.players.every(p=>p.ready)","info.players.filter(p=>p.connected).every(p=>p.ready)");
 edit("if(o.geometry)o.geometry.dispose();","if(o.geometry&&!o.isSprite)o.geometry.dispose();");
+edit('if(o.material.map)o.material.map.dispose();','if(o.isSprite&&o.material.map)o.material.map.dispose();');
 edit('stats.wave=Math.max(1,state.wave);',"const arrival=performance.now(),offset=arrival-state.at;\n if(coop.clockOffset===null)coop.clockOffset=offset;else coop.clockOffset+=Math.max(-2,Math.min(2,offset-coop.clockOffset))*.1;\n stats.wave=Math.max(1,state.wave);");
 edit('z.hp=e.hp;z.max=e.max;',"appendMotion(z.netSamples||(z.netSamples=[]),{at:state.at,x:e.x,z:e.z,yaw:e.yaw});\n  z.hp=e.hp;z.max=e.max;");
 edit('g.userData.goal={x:p.x',"appendMotion(g.userData.netSamples||(g.userData.netSamples=[]),{at:state.at,x:p.x,z:p.z,yaw:p.yaw});\n  g.userData.goal={x:p.x");
