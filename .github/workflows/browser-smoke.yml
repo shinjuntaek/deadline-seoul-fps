@@ -2,8 +2,10 @@ name: DEADLINE SEOUL browser smoke QA
 on:
   workflow_dispatch:
   push:
-    branches: [feat/scarier-faster-infected-20261111, fix/curb-and-zombie-realism-20261111, feat/infected-death-motion-20261111, fix/social-og-public-url-20261111]
+    branches: [fix/stability-visuals-20261113, feat/scarier-faster-infected-20261111, fix/curb-and-zombie-realism-20261111, feat/infected-death-motion-20261111, fix/social-og-public-url-20261111]
     paths:
+      - "client/**"
+      - "assets/materials/**"
       - "scripts/**"
       - "multiplayer/**"
       - "package.json"
@@ -11,6 +13,8 @@ on:
   pull_request:
     branches: [main]
     paths:
+      - "client/**"
+      - "assets/materials/**"
       - "scripts/**"
       - "api/**"
       - "multiplayer/**"
@@ -70,6 +74,11 @@ jobs:
         env:
           GAME_BASE_URL: http://127.0.0.1:4173
         run: node scripts/browser-smoke.cjs
+
+      - name: Two browsers reconnect and restore the active match
+        env:
+          GAME_BASE_URL: http://127.0.0.1:4173
+        run: node scripts/browser-stability.cjs
 
       - name: Upload QA report and screenshots
         if: always()

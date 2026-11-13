@@ -65,6 +65,16 @@ test('Actual four simultaneous websocket clients share lobby, start and server w
   const pong=await seen(clients[0],m=>m.t==='pong'&&m.sent===123);
   assert(Number.isFinite(pong.now));
   await seen(clients[1],m=>m.t==='state'&&m.players.find(p=>p.id===first)?.ammo.rifle===29);
+  // Terminate the transport during combat, then resume with the original token.
+  clients[0].ws.terminate();await wait(80);
+  const resumed=await connect(url);clients.push(resumed);
+  send(resumed,{t:'join',code,name:'QA 팀장',resumeToken:host.token});
+  const joined=await seen(resumed,m=>m.t==='joined');
+  assert.equal(joined.playerId,first);assert.equal(joined.resumed,true);
+  const recovery=await seen(resumed,m=>m.t==='resume');
+  assert.equal(recovery.phase,'playing');
+  assert.equal(recovery.state.players.find(p=>p.id===first).ammo.rifle,29);
+  assert.equal(recovery.state.players.length,4);
  }finally{
   for(const c of clients)try{c.ws.close()}catch{}
   await wait(100);
