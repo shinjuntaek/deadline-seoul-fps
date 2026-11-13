@@ -19,8 +19,9 @@ const check=(name,pass,detail)=>{report.checks.push({name,pass,detail});assert(p
   await page.waitForTimeout(1000);const walking=await page.evaluate(()=>window.__DEADLINE_PLAYTEST__.state());
   check('Skeleton pose changes during pursuit',!!before.rig&&!!walking.rig&&JSON.stringify(before.rig)!==JSON.stringify(walking.rig),{before:before.rig,after:walking.rig});
   // Playwright remembers the menu-button cursor position; establish a neutral
-  // pointer position before aiming and measuring the actual viewmodel.
-  await page.mouse.move(480,300);
+  // zero-origin pointer-lock coordinates before aiming. CDP mouse press/up
+  // at a retained absolute menu position synthesizes repeated warp deltas.
+  await page.mouse.move(0,0);
   await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
   await page.evaluate(()=>window.__DEADLINE_PLAYTEST__.aimAtEnemy());
   await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(resolve)));
@@ -30,6 +31,7 @@ const check=(name,pass,detail)=>{report.checks.push({name,pass,detail});assert(p
   check('Short mouse press fires with skinned enemies',true);
   await page.keyboard.press('KeyR');await page.waitForTimeout(600);
   report.reloadView=await page.evaluate(()=>({camera:window.__DEADLINE_PLAYTEST__.state().camera,mouse:window.__qaMouse}));
+  check('Reload keeps the aimed camera direction',Math.abs(report.reloadView.camera.pitch-report.beforeShot.pitch)<.2,report.reloadView);
   await page.screenshot({path:path.join(out,'anatomical-hand-reload.png')});
   await page.evaluate(()=>window.__DEADLINE_PLAYTEST__.bot(true));
   await page.waitForTimeout(18000);
