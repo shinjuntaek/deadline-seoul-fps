@@ -8,6 +8,7 @@ const check=(name,pass,detail)=>{report.checks.push({name,pass,detail});assert(p
  const context=await browser.newContext({viewport:{width:960,height:600},recordVideo:{dir:path.join(out,'video'),size:{width:640,height:400}}});
  const page=await context.newPage();page.on('pageerror',e=>report.errors.push(e.message));page.on('crash',()=>report.errors.push('renderer process crashed'));
  try{
+  await page.addInitScript(()=>{window.__qaMouse=[];document.addEventListener('mousemove',e=>{window.__qaMouse.push({x:e.movementX,y:e.movementY,locked:!!document.pointerLockElement});if(window.__qaMouse.length>20)window.__qaMouse.shift()})});
   await page.goto((process.env.GAME_BASE_URL||'http://127.0.0.1:4173')+'/?playtest=1');
   await page.waitForFunction(()=>window.__DEADLINE_PLAYTEST__?.ready(),null,{timeout:90000});
   await page.locator('#start').click();await page.evaluate(()=>window.__DEADLINE_PLAYTEST__.stage());
@@ -17,11 +18,18 @@ const check=(name,pass,detail)=>{report.checks.push({name,pass,detail});assert(p
   await page.screenshot({path:path.join(out,'skinned-combat-before-shooting.png')});
   await page.waitForTimeout(1000);const walking=await page.evaluate(()=>window.__DEADLINE_PLAYTEST__.state());
   check('Skeleton pose changes during pursuit',!!before.rig&&!!walking.rig&&JSON.stringify(before.rig)!==JSON.stringify(walking.rig),{before:before.rig,after:walking.rig});
+  // Playwright remembers the menu-button cursor position; establish a neutral
+  // pointer position before aiming and measuring the actual viewmodel.
+  await page.mouse.move(480,300);
+  await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
   await page.evaluate(()=>window.__DEADLINE_PLAYTEST__.aimAtEnemy());
+  await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(resolve)));
+  report.beforeShot=await page.evaluate(()=>window.__DEADLINE_PLAYTEST__.state().camera);
   await page.mouse.down();await page.waitForTimeout(350);await page.mouse.up();
   await page.waitForFunction(()=>window.__DEADLINE_PLAYTEST__.state().ammo<30,null,{timeout:10000});
   check('Short mouse press fires with skinned enemies',true);
   await page.keyboard.press('KeyR');await page.waitForTimeout(600);
+  report.reloadView=await page.evaluate(()=>({camera:window.__DEADLINE_PLAYTEST__.state().camera,mouse:window.__qaMouse}));
   await page.screenshot({path:path.join(out,'anatomical-hand-reload.png')});
   await page.evaluate(()=>window.__DEADLINE_PLAYTEST__.bot(true));
   await page.waitForTimeout(18000);

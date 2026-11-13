@@ -12,7 +12,7 @@ const check=(name,condition,detail)=>{report.steps.push({name,pass:!!condition,d
   const host=await a.newPage(),guest=await b.newPage();
   for(const p of [host,guest])p.on('pageerror',e=>report.errors.push(e.message));
   await host.addInitScript(()=>{window.__qaMouse=[];document.addEventListener('mousemove',e=>{window.__qaMouse.push({x:e.movementX,y:e.movementY,locked:!!document.pointerLockElement});if(window.__qaMouse.length>12)window.__qaMouse.shift()})});
-  await Promise.all([host.goto(base),guest.goto(base)]);
+  await Promise.all([host.goto(base+'?qa=1'),guest.goto(base+'?qa=1')]);
   for(const p of [host,guest]){await p.locator('#coop-launch').waitFor({timeout:60000});await p.locator('#coop-launch').click()}
   await host.locator('#coop-name').fill('Host QA');await host.locator('#coop-create').click();
   await host.waitForFunction(()=>window.__DEADLINE_COOP_STATUS__?.().room?.length===6);
@@ -32,8 +32,12 @@ const check=(name,condition,detail)=>{report.steps.push({name,pass:!!condition,d
   check('Page reload resumes original player and active match',after.playerId===before.playerId&&after.room===code,{before:before.playerId,after:after.playerId,phase:after.phase});
   await guest.screenshot({path:path.join(output,'stability-resumed-match.png')});
   // Repeat explicit menu -> create -> leave -> reopen to detect stale lobby state.
+  report.beforeExit=await guest.evaluate(()=>({game:window.__DEADLINE_QA__(),coop:window.__DEADLINE_COOP_STATUS__()}));
   await guest.keyboard.press('Escape');
-  await guest.locator('#quit').click();await guest.locator('#coop-launch').click();
+  // The authoritative server keeps running while the client reloads. A player
+  // may legitimately die during slow software-renderer screenshots.
+  await guest.locator('#quit:visible, #result-menu:visible').first().click();
+  await guest.locator('#coop-launch').click();
   check('Leaving restores create/join controls',await guest.locator('#coop-create').isVisible()&&await guest.locator('#coop-join').isVisible());
   await guest.locator('#coop-close').click();await guest.locator('#coop-launch').click();
   check('Reopening lobby has no stale share panel',await guest.locator('#coop-create').isVisible()&&!await guest.locator('#coop-copy').isVisible());
@@ -54,6 +58,6 @@ const check=(name,condition,detail)=>{report.steps.push({name,pass:!!condition,d
   check('Starting without look input keeps the camera level',Math.abs(report.visual.view.pitch)<.05,report.visual.view);
   check('No unhandled JavaScript errors after medium render',report.errors.length===0,report.errors);
   report.status='PASS';
- }catch(error){report.status='FAIL';report.failure=error.stack;throw error}
+ }catch(error){report.status='FAIL';report.failure=error.stack;for(const context of browser.contexts())for(const page of context.pages()){report.failureState=await page.evaluate(()=>({game:window.__DEADLINE_QA__?.(),coop:window.__DEADLINE_COOP_STATUS__?.()})).catch(()=>null);await page.screenshot({path:path.join(output,'stability-failure.png')}).catch(()=>{});}throw error}
  finally{fs.writeFileSync(path.join(output,'stability-report.json'),JSON.stringify(report,null,2));await browser.close()}
 })().catch(e=>{console.error(e);process.exitCode=1});
