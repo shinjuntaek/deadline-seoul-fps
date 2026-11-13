@@ -55,9 +55,9 @@ async function runCase(browser,variant){
     check('rifle ammo 30',ammoBefore===30,ammoBefore);
     await page.screenshot({path:path.join(reports,name+'-wave1.png')});
     // Verify the loaded AI human photo is actually used, rather than crude capsules.
-    await page.waitForFunction(()=>window.__DEADLINE_ZOMBIE_ART__?.().photoActive>0,null,{timeout:24000,polling:300});
+    await page.waitForFunction(()=>window.__DEADLINE_ZOMBIE_ART__?.().photoActive>0||window.__DEADLINE_ZOMBIE_ART__?.().skinned>0,null,{timeout:24000,polling:300});
     const photoInfo=await page.evaluate(()=>window.__DEADLINE_ZOMBIE_ART__());
-    check('Photoreal zombie cutout takes over after texture loads',photoInfo.photoActive>0,photoInfo);
+    check('Loaded character visual replaces the primitive fallback',photoInfo.photoActive>0||photoInfo.skinned>0,photoInfo);
 
     // Genuine mouse input, not a direct game-engine function invocation.
     if(name==='desktop'){

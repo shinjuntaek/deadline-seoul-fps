@@ -18,8 +18,17 @@ if(moon.castShadow){
  moon.shadow.mapSize.set(size,size);Object.assign(moon.shadow.camera,{left:-span,right:span,top:span,bottom:-span});
  moon.shadow.camera.updateProjectionMatrix();scene.add(moon.target);
 }
-hemi.intensity=quality==='low'?1.05:.66;hemi.color.setHex(0x8da5b8);
-flashlight.color.setHex(0xeee7ce);flashlight.penumbra=.65;
+hemi.intensity=quality==='low'?1.25:.92;hemi.color.setHex(0x8da5b8);
+flashlight.color.setHex(0xeee7ce);flashlight.penumbra=.65;flashlight.intensity=32;
+// A visible destination light at the existing east-side shop; no new collider.
+const shopSignCanvas=document.createElement('canvas');shopSignCanvas.width=512;shopSignCanvas.height=128;
+const shopInk=shopSignCanvas.getContext('2d');shopInk.fillStyle='#cce3d5';shopInk.fillRect(0,0,512,128);shopInk.fillStyle='#125b48';shopInk.font='bold 65px sans-serif';shopInk.textAlign='center';shopInk.fillText('24시 편의점',256,86);
+const shopTex=new THREE.CanvasTexture(shopSignCanvas);shopTex.colorSpace=THREE.SRGBColorSpace;
+const shopSign=new THREE.Mesh(new THREE.PlaneGeometry(5.4,1.1),new THREE.MeshBasicMaterial({map:shopTex,toneMapped:false}));shopSign.rotation.y=-Math.PI/2;shopSign.position.set(11.43,3.45,21);scene.add(shopSign);
+if(quality!=='low'){
+ const shopLight=new THREE.PointLight(0xbce8d1,17,10,2);shopLight.position.set(10.9,2.6,21);scene.add(shopLight);
+ const abandonedLamp=new THREE.SpotLight(0xffdca4,28,22,.40,.7,1.6);abandonedLamp.position.set(-3.4,.8,10);abandonedLamp.target.position.set(4,.1,4);scene.add(abandonedLamp,abandonedLamp.target);
+}
 // One alpha texture, one instanced draw for local illuminated wet-road pools.
 const poolCanvas=document.createElement('canvas');poolCanvas.width=poolCanvas.height=64;
 const poolCtx=poolCanvas.getContext('2d'),gradient=poolCtx.createRadialGradient(32,32,0,32,32,32);

@@ -5,3 +5,5 @@ browser-qa/
 .vercel/
 *.log
 .openai/
+
+assets/models/*.glb
