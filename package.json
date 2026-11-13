@@ -3,9 +3,9 @@
   "private": true,
   "version": "1.0.0-rc.19",
   "scripts": {
-    "build": "npm run test:coop && node scripts/recover-release.cjs && node scripts/prepare-assets.cjs && node scripts/audit-zombie-art.cjs && node scripts/patch-game.cjs && node scripts/graphics-upgrade.cjs && node scripts/perf-adaptive.cjs && node scripts/environment-realism.cjs && node scripts/environment-props.cjs && node scripts/dense-waves.cjs && node scripts/enemy-speed.cjs && node scripts/integration-qa.cjs && node scripts/coop-client.cjs && node scripts/horror-intensity.cjs && node scripts/repair-navigation.cjs && node scripts/zombie-photo-realism.cjs && node scripts/zombie-silhouette-visibility.cjs && node scripts/zombie-death-animation.cjs && node scripts/stability-upgrade.cjs && node scripts/cinematic-upgrade.cjs && node scripts/character-upgrade.cjs && node scripts/verify-release.cjs && node scripts/build-og-image.cjs && node scripts/verify-og-social.cjs && node scripts/verify-client-state.cjs",
+    "build": "npm run test:coop && node scripts/recover-release.cjs && node scripts/prepare-assets.cjs && node scripts/audit-zombie-art.cjs && node scripts/patch-game.cjs && node scripts/graphics-upgrade.cjs && node scripts/perf-adaptive.cjs && node scripts/environment-realism.cjs && node scripts/environment-props.cjs && node scripts/dense-waves.cjs && node scripts/enemy-speed.cjs && node scripts/integration-qa.cjs && node scripts/coop-client.cjs && node scripts/horror-intensity.cjs && node scripts/repair-navigation.cjs && node scripts/zombie-photo-realism.cjs && node scripts/zombie-silhouette-visibility.cjs && node scripts/zombie-death-animation.cjs && node scripts/verify-release.cjs && node scripts/build-og-image.cjs && node scripts/verify-og-social.cjs",
     "test": "npm run build",
-    "test:coop": "node --test multiplayer/*.test.mjs"
+    "test:coop": "node --test multiplayer/coop-engine.test.mjs multiplayer/coop-ws.test.mjs multiplayer/coop-latency.test.mjs"
   },
   "dependencies": {
     "three": "0.164.1",

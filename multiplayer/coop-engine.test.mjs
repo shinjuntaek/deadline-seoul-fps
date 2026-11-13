@@ -29,7 +29,7 @@ test('Lobby: create, invite, host, ready, capacity 4, and promote disconnected h
  assert.equal(room.start(members[0].playerId).error,'PLAYERS_NOT_READY');
  assert.equal(room.ready(members[0].playerId,true),true);
  assert.equal(room.start(members[0].playerId).error,'PLAYERS_NOT_READY');
- room.remove(members[0].clientId,true);
+ room.remove(members[0].clientId);
  assert.equal(room.hostId,members[1].playerId);
  assert.equal(room.playerCount,3);
  assert.equal(room.ready(members[1].playerId,true),true);

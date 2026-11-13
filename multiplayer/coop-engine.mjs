@@ -20,8 +20,7 @@ export const WEAPON_CONFIG=Object.freeze({
  rifle:{ammo:30,reserve:180,damage:32,rpm:720,range:95,reload:1550,pellets:1},
  shotgun:{ammo:8,reserve:40,damage:16,rpm:85,range:28,reload:2300,pellets:9},
 });
-import {SPAWN_POINTS,obstacleAABBs,obstructed,clearSegment,findPath} from './navigation.mjs';
-export {SPAWN_POINTS,obstructed} from './navigation.mjs';
+const SPAWN_POINTS=[[-8,-50],[8,-50],[-18,-43],[18,-43],[-48,-28],[48,-28],[-50,0],[50,0],[-49,27],[49,27],[-18,49],[18,49],[-4,50],[5,50]];
 const MAX_PLAYERS=4,MIN_PLAYERS=2;
 const clamp=(x,a,b)=>Math.min(b,Math.max(a,x));
 const norm=(a,b)=>Math.hypot(a,b)||1;
@@ -29,6 +28,18 @@ const finite=(v,def=0)=>typeof v==='number'&&Number.isFinite(v)?v:def;
 const seqId=()=>typeof crypto!=='undefined'&&crypto.randomUUID?crypto.randomUUID():Math.random().toString(36).slice(2);
 const cleanName=s=>String(s||'생존자').replace(/[\u0000-\u001f\u007f<>]/g,'').trim().slice(0,16)||'생존자';
 const deviate=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
+const obstacleAABBs=[
+ ...[[-5.8,-26],[5.8,-18],[-5.5,10],[5.9,27],[-16.2,-6],[16.5,-33],[-16.4,42]].map(([x,z])=>({x,z,w:4.05,d:2})),
+ ...[-38,34].flatMap((z,row)=>Array.from({length:7},(_,i)=>i-3).filter(i=>Math.abs(i)===3).map(i=>({x:i*2.9,z,w:2.6,d:.7}))),
+ {x:-14.9,z:-45,w:2.85,d:8.25},
+ {x:-15.5,z:-23,w:8,d:8},{x:15.5,z:21,w:8,d:9},
+];
+function obstructed(x,z,r=.36){
+ if(Math.abs(x)>51-r||Math.abs(z)>51-r)return true;
+ if(Math.abs(x)>26&&Math.abs(z)<50)return true; // outer city blocks
+ for(const b of obstacleAABBs)if(Math.abs(x-b.x)<b.w/2+r&&Math.abs(z-b.z)<b.d/2+r)return true;
+ return false;
+}
 function raySphere(origin,dx,dy,dz,ex,ey,ez,r,maxDistance){
  const ox=ex-origin.x,oy=ey-origin.y,oz=ez-origin.z,t=ox*dx+oy*dy+oz*dz;
  if(t<.1||t>maxDistance)return Infinity;
@@ -56,22 +67,18 @@ export class CoopRoom {
  get host(){return this.hostId}
  add(clientId,name,send,resumeToken){
   if(typeof send!=='function')return{ok:false,error:'INVALID_CLIENT'};
-  const previous=resumeToken&&[...this.players.values()].find(p=>p.token===resumeToken);
+  const previous=resumeToken&&[...this.players.values()].find(p=>p.token===resumeToken&&!p.connected);
   if(previous){
-   this.connections.delete(previous.clientId);
    previous.connected=true;previous.clientId=clientId;previous.leftAt=0;
-   if(!this.hostId)this.hostId=previous.id;
    this.connections.set(clientId,{id:previous.id,send});
    this.lastActivity=this.now();this.broadcastLobby();
    return{ok:true,playerId:previous.id,token:previous.token,resumed:true};
   }
-  if(resumeToken)return{ok:false,error:'SESSION_EXPIRED'};
   if(this.phase!=='lobby')return{ok:false,error:'MATCH_IN_PROGRESS'};
-  for(const [id,p] of this.players)if(!p.connected&&this.now()-p.leftAt>30000)this.players.delete(id);
   if(this.playerCount>=this.maxPlayers)return{ok:false,error:'ROOM_FULL'};
   const id=seqId(),token=seqId(),i=this.playerCount;
   const p={id,token,clientId,name:cleanName(name),connected:true,ready:false,
-   x:(i%2?1:-1)*(1.5+i*.7),z:27+(i>=2?3:0),yaw:0,pitch:0,
+   x:(i%2?1:-1)*(1.5+i*.7),z:27+(i>=2?3:0),yaw:Math.PI,pitch:0,
    health:100,armor:50,stamina:100,downed:false,bleed:0,dead:false,revive:0,reviveTarget:null,
    weapon:'rifle',ammo:{rifle:30,shotgun:8},reserve:{rifle:180,shotgun:40},
    reloading:null,reloadDone:0,lastShot:0,lastInput:this.now(),lastMoveAt:this.now(),
@@ -81,12 +88,12 @@ export class CoopRoom {
   this.lastActivity=this.now();this.broadcastLobby();
   return{ok:true,playerId:id,token,resumed:false};
  }
- remove(clientId,intentional=false){
+ remove(clientId){
   const link=this.connections.get(clientId);if(!link)return;
   this.connections.delete(clientId);
   const p=this.players.get(link.id);if(!p)return;
   p.connected=false;p.leftAt=this.now();p.reviveTarget=null;
-  if(this.phase==='lobby'&&intentional)this.players.delete(p.id);
+  if(this.phase==='lobby')this.players.delete(p.id);
   if(this.hostId===p.id)this.hostId=[...this.players.values()].find(x=>x.connected)?.id||null;
   this.lastActivity=this.now();this.broadcastLobby();
  }
@@ -147,9 +154,7 @@ export class CoopRoom {
   const pool=SPAWN_POINTS.filter(([x,z])=>active.every(pl=>Math.hypot(pl.x-x,pl.z-z)>18));
   const source=(pool.length?pool:SPAWN_POINTS)[Math.floor(this.rng()*(pool.length?pool:SPAWN_POINTS).length)];
   let x=source[0]+(this.rng()-.5)*3,z=source[1]+(this.rng()-.5)*3;
-  x=clamp(x,-24.5,24.5);z=clamp(z,-49,49);
-  if(obstructed(x,z,p.radius)){x=source[0];z=source[1]}
-  if(obstructed(x,z,p.radius))throw new Error('Invalid spawn configuration');
+  x=clamp(x,-49.5,49.5);z=clamp(z,-49.5,49.5);
   const e={id:++this.enemyId,kind,x,z,yaw:0,hp:p.hp,max:p.hp,attack:.4+this.rng()*.25,dead:false,lunge:0,lungeCooldown:2.0+(this.enemyId%6)*.65};
   this.enemies.set(e.id,e);return e;
  }
@@ -183,18 +188,18 @@ export class CoopRoom {
   if(p.ammo[p.weapon]<=0)return{ok:false,error:'EMPTY'};
   p.lastShot=now;p.ammo[p.weapon]--;p.shots++;
   const yaw=p.yaw,pitch=p.pitch;
-  const dx=-Math.sin(yaw)*Math.cos(pitch),dy=Math.sin(pitch),dz=-Math.cos(yaw)*Math.cos(pitch);
+  const dx=-Math.sin(yaw)*Math.cos(pitch),dy=-Math.sin(pitch),dz=-Math.cos(yaw)*Math.cos(pitch);
   const hits=[],pellets=cfg.pellets;
   for(let i=0;i<pellets;i++){
    const jitter=pellets===1?0:(this.rng()-.5)*.13;
    const a=yaw+jitter,b=pitch+(pellets===1?0:(this.rng()-.5)*.11);
-   const dirX=pellets===1?dx:-Math.sin(a)*Math.cos(b),dirY=pellets===1?dy:Math.sin(b),dirZ=pellets===1?dz:-Math.cos(a)*Math.cos(b);
+   const dirX=pellets===1?dx:-Math.sin(a)*Math.cos(b),dirY=pellets===1?dy:-Math.sin(b),dirZ=pellets===1?dz:-Math.cos(a)*Math.cos(b);
    let best=null,bestD=Infinity,headshot=false;
    for(const e of this.enemies.values()){
     if(e.dead)continue;
     const pp=ENEMY_PROFILE[e.kind],radius=pp.radius;
     const origin={x:p.x,y:1.72,z:p.z};
-    const scale=e.kind==='brute'?1.58:e.kind==='runner'?.92:1,hd=2.02*scale;
+    const hd=e.kind==='brute'?3.59:1.99,scale=e.kind==='brute'?1.58:e.kind==='runner'?.92:1;
     const head=raySphere(origin,dirX,dirY,dirZ,e.x,hd,e.z,radius*.69,cfg.range);
     const body=raySphere(origin,dirX,dirY,dirZ,e.x,1.18*scale,e.z,radius*1.37,cfg.range);
     const dist=Math.min(head,body);
@@ -269,11 +274,7 @@ export class CoopRoom {
    }
   }
   const fighters=[...this.players.values()].filter(p=>p.connected&&!p.downed&&!p.dead);
-  if(fighters.length===0){
-   const resumable=[...this.players.values()].some(p=>!p.connected&&!p.dead&&!p.downed&&now-p.leftAt<=30000);
-   if(!resumable)this.finish('defeat','모든 요원 전투 불능');
-   return;
-  }
+  if(fighters.length===0){this.finish('defeat','모든 요원 전투 불능');return}
   if(this.phase==='playing'){
    const cap=Math.min(22,6+fighters.length*4);
    if(this.waveQueue.length&&this.enemies.size<cap){
@@ -290,14 +291,7 @@ export class CoopRoom {
     if(distance<d){d=distance;target=fighter}
    }
    if(!target)continue;
-   let aim=target;
-   if(!clearSegment(e,target,cfg.radius)){
-    if(!e.path||!e.path.length||now-(e.pathAt||0)>1500){e.path=findPath(e,target,cfg.radius);e.pathAt=now}
-    while(e.path.length&&Math.hypot(e.x-e.path[0].x,e.z-e.path[0].z)<.08)e.path.shift();
-    if(e.path.length)aim=e.path[0];
-   }else e.path=null;
-   const ad=Math.hypot(aim.x-e.x,aim.z-e.z)||1;
-   const vx=(aim.x-e.x)/ad,vz=(aim.z-e.z)/ad;
+   const vx=(target.x-e.x)/(d||1),vz=(target.z-e.z)/(d||1);
    e.yaw=Math.atan2(vx,vz)+Math.PI;
    e.lunge=Math.max(0,e.lunge-dt);
    e.lungeCooldown=Math.max(0,e.lungeCooldown-dt);
@@ -307,7 +301,7 @@ export class CoopRoom {
    const surge=e.kind==='runner'?.27:e.kind==='brute'?.12:.20;
    const sprintLunge=e.lunge>0?(e.kind==='runner'?1.33:e.kind==='brute'?1.38:1.25):1;
    const sp=Math.min(cfg.speed*1.7,cfg.speed*(1+surge*clamp(1-d/20,0,1))*sprintLunge);
-   if(d>cfg.range){const step=Math.min(sp*dt,ad),nx=e.x+vx*step,nz=e.z+vz*step;
+   if(d>cfg.range){const nx=e.x+vx*sp*dt,nz=e.z+vz*sp*dt;
     if(!obstructed(nx,nz,cfg.radius)){e.x=nx;e.z=nz}else{
      const sx=-vz,sz=vx;
      if(!obstructed(e.x+sx*sp*dt,e.z+sz*sp*dt,cfg.radius)){e.x+=sx*sp*dt;e.z+=sz*sp*dt}

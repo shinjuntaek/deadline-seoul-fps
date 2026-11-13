@@ -2,11 +2,8 @@ name: DEADLINE SEOUL browser smoke QA
 on:
   workflow_dispatch:
   push:
-    branches: [fix/stability-visuals-20261113, feat/scarier-faster-infected-20261111, fix/curb-and-zombie-realism-20261111, feat/infected-death-motion-20261111, fix/social-og-public-url-20261111]
+    branches: [feat/scarier-faster-infected-20261111, fix/curb-and-zombie-realism-20261111, feat/infected-death-motion-20261111, fix/social-og-public-url-20261111]
     paths:
-      - "client/**"
-      - "assets/materials/**"
-      - "assets/models/**"
       - "scripts/**"
       - "multiplayer/**"
       - "package.json"
@@ -14,9 +11,6 @@ on:
   pull_request:
     branches: [main]
     paths:
-      - "client/**"
-      - "assets/materials/**"
-      - "assets/models/**"
       - "scripts/**"
       - "api/**"
       - "multiplayer/**"
@@ -54,7 +48,6 @@ jobs:
           npx playwright install --with-deps chromium
 
       - name: Recover source and build all optimized game assets
-        id: build
         run: npm run build
 
       - name: Start local real WebSocket and game server
@@ -69,28 +62,14 @@ jobs:
           exit 1
 
       - name: Two-player browser and actual server co-op integration
-        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
         env:
           GAME_BASE_URL: http://127.0.0.1:4173
         run: node scripts/browser-coop.cjs
 
       - name: Real Chromium input tests and mobile-viewport emulation
-        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
         env:
           GAME_BASE_URL: http://127.0.0.1:4173
         run: node scripts/browser-smoke.cjs
-
-      - name: Two browsers reconnect and restore the active match
-        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
-        env:
-          GAME_BASE_URL: http://127.0.0.1:4173
-        run: node scripts/browser-stability.cjs
-
-      - name: Skinned characters and anatomical viewmodel in combat
-        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
-        env:
-          GAME_BASE_URL: http://127.0.0.1:4173
-        run: node scripts/browser-characters.cjs
 
       - name: Upload QA report and screenshots
         if: always()

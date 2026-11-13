@@ -1,9 +1,0 @@
-node_modules/
-dist/
-.release/
-browser-qa/
-.vercel/
-*.log
-.openai/
-
-assets/models/*.glb

@@ -15,7 +15,6 @@ const instanceId=crypto.randomUUID();
 const ms=()=>Date.now();
 const send=(ws,msg)=>{
  if(ws.readyState!==WebSocket.OPEN)return;
- if(ws.bufferedAmount>262144){ws.close(1013,'Slow consumer');return}
  try{ws.send(JSON.stringify(msg))}catch{}
 };
 const server=createServer((req,res)=>{
@@ -24,7 +23,7 @@ const server=createServer((req,res)=>{
  res.setHeader('cache-control','no-store');
  res.setHeader('content-type','application/json; charset=utf-8');
  res.end(JSON.stringify({status:'ok',service:'deadline-seoul-coop-preview',websocket:true,
-  coordination:process.env.COOP_SINGLE_INSTANCE==='1'?'dedicated-single-process':'same-instance-only',durable:false,maxPlayers:4,
+  coordination:'same-instance-only',durable:false,maxPlayers:4,
   note:'Use Cloudflare Durable Objects for reliable public multi-instance rooms'}));
 });
 const wss=new WebSocketServer({server,maxPayload:2048,perMessageDeflate:false,clientTracking:true});
@@ -51,22 +50,18 @@ function uniqueCode(){
 wss.on('connection',(ws,req)=>{
  const origin=String(req.headers.origin||'');
  const reqHost=String(req.headers.host||'');
- let siteHost='';try{siteHost=origin?new URL(origin).host:''}catch{ws.close(1008,'Invalid origin');return}
+ const siteHost=origin?new URL(origin).host:'';
  const allowlist=String(process.env.COOP_ALLOWED_ORIGINS||'').split(',').map(s=>s.trim()).filter(Boolean);
  const sameSite=siteHost===reqHost;
- const samePreviewFamily=false; // unrelated Vercel tenants are not trusted origins
+ const samePreviewFamily=siteHost.endsWith('.vercel.app')&&reqHost.endsWith('.vercel.app');
  const explicitlyAllowed=allowlist.includes(origin);
  if(origin&&!sameSite&&!samePreviewFamily&&!explicitlyAllowed){
   send(ws,{t:'error',code:'FORBIDDEN_ORIGIN'});ws.close(1008,'Origin rejected');return;
  }
  const clientId=crypto.randomUUID();
- let leaving=false;
  let room=null,playerId=null,initialAt=ms(),messages=0,windowAt=initialAt,lastMessage=initialAt;
  send(ws,{t:'hello',v:1,instanceId,heartbeat:10000,maxPlayers:4,warning:'preview-instance-limited'});
  const helloTimeout=setTimeout(()=>{if(!playerId&&ws.readyState===WebSocket.OPEN)ws.close(1008,'Handshake timeout')},18000);
- let alive=true;ws.on('pong',()=>{alive=true});
- const heartbeat=setInterval(()=>{if(!alive){ws.terminate();return}alive=false;ws.ping()},15000);
- heartbeat.unref?.();
  ws.on('message',data=>{
   const now=ms();
   if(now-windowAt>1000){messages=0;windowAt=now}
@@ -93,22 +88,17 @@ wss.on('connection',(ws,req)=>{
    clearTimeout(helloTimeout);
    send(ws,{t:'joined',code,playerId,token:result.token,resumed:result.resumed,instanceId});
    room.broadcastLobby();
-   if(result.resumed){
-    send(ws,{t:'resume',phase:room.phase,state:room.snapshot()});
-   }
    ensureTimer();
    return;
   }
-  if(!room.connections.has(clientId)){ws.close(4001,'Session replaced');return}
-  if(msg.t==='leave'){leaving=true;ws.close(1000,'Left room');return}
+  if(msg.t==='leave'){ws.close(1000,'Left room');return}
   const result=room.dispatch(playerId,msg);
   if(result?.t==='pong')send(ws,result);
   else if(result&&!result.ok&&!['input','fire'].includes(msg.t))send(ws,{t:'error',code:result.error||'ACTION_REJECTED'});
  });
  ws.on('close',()=>{
-  clearInterval(heartbeat);
   clearTimeout(helloTimeout);
-  if(room)room.remove(clientId,leaving);
+  if(room)room.remove(clientId);
  });
  ws.on('error',()=>{if(room)room.remove(clientId)});
 });
