@@ -24,7 +24,8 @@ const check=(name,condition,detail)=>{report.steps.push({name,pass:!!condition,d
   check('Two independent browsers enter the same operation',true,{code});
   await guest.keyboard.down('KeyW');await guest.waitForTimeout(700);await guest.keyboard.up('KeyW');
   await host.waitForTimeout(1000);await host.screenshot({path:path.join(output,'stability-two-browser-playing.png')});
-  await guest.reload();await guest.locator('#coop-launch').waitFor({timeout:60000});await guest.locator('#coop-launch').click();
+  await guest.reload();await guest.locator('#coop-launch').waitFor({timeout:60000});
+  if(!await guest.locator('#coop-panel').isVisible())await guest.locator('#coop-launch').click();
   await guest.locator('#coop-recover').click();await guest.waitForFunction(()=>window.__DEADLINE_COOP_STATUS__?.().active);
   const after=await guest.evaluate(()=>window.__DEADLINE_COOP_STATUS__());
   check('Page reload resumes original player and active match',after.playerId===before.playerId&&after.room===code,{before:before.playerId,after:after.playerId,phase:after.phase});
