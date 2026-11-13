@@ -1,3 +1,4 @@
+import {CAMPAIGN_STAGES,CAMPAIGN_BLOCKS,CAMPAIGN_START,campaignState,campaignQueue,campaignSpawn,campaignBlocked,advanceCampaign} from '../shared/campaign.mjs';
 /**
  * DEADLINE: SEOUL — authoritative cooperative room simulation.
  * Platform-independent ESM: used by Vercel WebSocket adapter and locally by node:test.
@@ -53,15 +54,17 @@ export function generateRoomCode(rng=Math.random){
  return code;
 }
 export class CoopRoom {
- constructor(code,{rng=Math.random,now=()=>Date.now(),maxPlayers=MAX_PLAYERS}={}){
+ constructor(code,{rng=Math.random,now=()=>Date.now(),maxPlayers=MAX_PLAYERS,mode='survival'}={}){
   if(!validRoomCode(code))throw Error('INVALID_CODE');
   this.code=code;this.rng=rng;this.now=now;this.maxPlayers=Math.min(MAX_PLAYERS,Math.max(2,maxPlayers));
   this.players=new Map();this.connections=new Map();this.hostId=null;
+  this.mode=mode==='campaign'?'campaign':'survival';this.campaign=campaignState();
   this.phase='lobby';this.waveIndex=-1;this.waveQueue=[];this.enemies=new Map();this.enemyId=0;
   this.cooldown=0;this.intermission=-1;this.extractionTimer=0;this.extractionHold=0;
   this.totalKills=0;this.score=0;this.tickCounter=0;this.events=[];
   this.lastSnapshot=0;this.maxActiveEnemies=0;this.lastActivity=this.now();
  }
+ isObstructed(x,z,r=.36){return this.mode==='campaign'?campaignBlocked(x,z,r,this.campaign):obstructed(x,z,r)}
  get connectedCount(){return[...this.players.values()].filter(p=>p.connected).length}
  get playerCount(){return this.players.size}
  get host(){return this.hostId}
@@ -104,7 +107,7 @@ export class CoopRoom {
   for(const connection of this.connections.values())try{connection.send(msg)}catch{}
  }
  broadcastLobby(){
-  this.broadcast({t:'lobby',code:this.code,phase:this.phase,hostId:this.hostId,maxPlayers:this.maxPlayers,
+  this.broadcast({t:'lobby',mode:this.mode,code:this.code,phase:this.phase,hostId:this.hostId,maxPlayers:this.maxPlayers,
    players:[...this.players.values()].map(p=>({id:p.id,name:p.name,ready:p.ready,connected:p.connected})),
    minPlayers:MIN_PLAYERS});
  }
@@ -124,7 +127,8 @@ export class CoopRoom {
    p.revive=0;p.reviveTarget=null;p.weapon='rifle';p.ammo={rifle:30,shotgun:8};
    p.reserve={rifle:180,shotgun:40};p.reloading=null;p.shots=0;p.hits=0;p.kills=0;p.score=0;
   }
-  this.nextWave();this.broadcast({t:'start',code:this.code,at:this.now(),wave:1});
+  if(this.mode==='campaign'){this.campaign=campaignState();this.waveIndex=0;this.waveQueue=[];for(const p of present){p.z=CAMPAIGN_START.z;p.yaw=0;p.lastMoveAt=this.now()}}else this.nextWave();
+  this.broadcast({t:'start',mode:this.mode,code:this.code,at:this.now(),wave:1});
   return{ok:true};
  }
  nextWave(){
@@ -151,10 +155,11 @@ export class CoopRoom {
  spawnEnemy(kind){
   const p=ENEMY_PROFILE[kind];
   const active=[...this.players.values()].filter(x=>x.connected&&!x.downed&&!x.dead);
-  const pool=SPAWN_POINTS.filter(([x,z])=>active.every(pl=>Math.hypot(pl.x-x,pl.z-z)>18));
-  const source=(pool.length?pool:SPAWN_POINTS)[Math.floor(this.rng()*(pool.length?pool:SPAWN_POINTS).length)];
+  const sourcePoints=this.mode==='campaign'?Array.from({length:8},(_,i)=>{const p=campaignSpawn(this.campaign.stage,i);return[p.x,p.z]}):SPAWN_POINTS;
+  const pool=sourcePoints.filter(([x,z])=>active.every(pl=>Math.hypot(pl.x-x,pl.z-z)>18));
+  const source=(pool.length?pool:sourcePoints)[Math.floor(this.rng()*(pool.length?pool:sourcePoints).length)];
   let x=source[0]+(this.rng()-.5)*3,z=source[1]+(this.rng()-.5)*3;
-  x=clamp(x,-49.5,49.5);z=clamp(z,-49.5,49.5);
+  if(this.mode!=='campaign'){x=clamp(x,-49.5,49.5);z=clamp(z,-49.5,49.5)}
   const e={id:++this.enemyId,kind,x,z,yaw:0,hp:p.hp,max:p.hp,attack:.4+this.rng()*.25,dead:false,lunge:0,lungeCooldown:2.0+(this.enemyId%6)*.65};
   this.enemies.set(e.id,e);return e;
  }
@@ -169,13 +174,13 @@ export class CoopRoom {
   p.pitch=clamp(finite(packet.pitch,p.pitch),-1.38,1.38);
   p.sequence=Math.max(p.sequence,Math.floor(finite(packet.seq,0)));
   if(p.dead||p.downed)return true;
-  const x=clamp(finite(packet.x,p.x),-50,50),z=clamp(finite(packet.z,p.z),-50,50);
+  const x=clamp(finite(packet.x,p.x),-50,50),z=clamp(finite(packet.z,p.z),this.mode==='campaign'?-331:-50,this.mode==='campaign'?18:50);
   const d=Math.hypot(x-p.x,z-p.z);
   const max=(packet.sprint?7.15:4.55)*dt+.20;
-  if(d<=max&&!obstructed(x,z)){p.x=x;p.z=z}
+  if(d<=max&&!this.isObstructed(x,z)){p.x=x;p.z=z}
   else if(d>max){
    const nx=p.x+(x-p.x)*max/(d||1),nz=p.z+(z-p.z)*max/(d||1);
-   if(!obstructed(nx,nz)){p.x=nx;p.z=nz}
+   if(!this.isObstructed(nx,nz)){p.x=nx;p.z=nz}
   }
   return true;
  }
@@ -188,12 +193,12 @@ export class CoopRoom {
   if(p.ammo[p.weapon]<=0)return{ok:false,error:'EMPTY'};
   p.lastShot=now;p.ammo[p.weapon]--;p.shots++;
   const yaw=p.yaw,pitch=p.pitch;
-  const dx=-Math.sin(yaw)*Math.cos(pitch),dy=-Math.sin(pitch),dz=-Math.cos(yaw)*Math.cos(pitch);
+  const dx=-Math.sin(yaw)*Math.cos(pitch),dy=Math.sin(pitch),dz=-Math.cos(yaw)*Math.cos(pitch);
   const hits=[],pellets=cfg.pellets;
   for(let i=0;i<pellets;i++){
    const jitter=pellets===1?0:(this.rng()-.5)*.13;
    const a=yaw+jitter,b=pitch+(pellets===1?0:(this.rng()-.5)*.11);
-   const dirX=pellets===1?dx:-Math.sin(a)*Math.cos(b),dirY=pellets===1?dy:-Math.sin(b),dirZ=pellets===1?dz:-Math.cos(a)*Math.cos(b);
+   const dirX=pellets===1?dx:-Math.sin(a)*Math.cos(b),dirY=pellets===1?dy:Math.sin(b),dirZ=pellets===1?dz:-Math.cos(a)*Math.cos(b);
    let best=null,bestD=Infinity,headshot=false;
    for(const e of this.enemies.values()){
     if(e.dead)continue;
@@ -207,7 +212,7 @@ export class CoopRoom {
    }
    if(best&&bestD<Infinity){
     let blockedShot=false;
-    for(const b of obstacleAABBs){
+    for(const b of (this.mode==='campaign'?CAMPAIGN_BLOCKS:obstacleAABBs)){
      const cx=b.x-p.x,cz=b.z-p.z,projection=cx*dirX+cz*dirZ;
      if(projection<=0||projection>=bestD)continue;
      const px=p.x+dirX*projection,pz=p.z+dirZ*projection;
@@ -274,12 +279,16 @@ export class CoopRoom {
    }
   }
   const fighters=[...this.players.values()].filter(p=>p.connected&&!p.downed&&!p.dead);
-  if(fighters.length===0){this.finish('defeat','모든 요원 전투 불능');return}
+  if(fighters.length===0){
+   const reconnecting=[...this.players.values()].some(p=>!p.connected&&!p.dead&&!p.downed&&p.leftAt&&now-p.leftAt<30000);
+   if(reconnecting)return;
+   this.finish('defeat','모든 요원 전투 불능');return
+  }
   if(this.phase==='playing'){
    const cap=Math.min(22,6+fighters.length*4);
    if(this.waveQueue.length&&this.enemies.size<cap){
     this.cooldown-=dt;
-    if(this.cooldown<=0){this.spawnEnemy(this.waveQueue.shift());this.cooldown=WAVE_CONFIG[this.waveIndex].interval}
+    if(this.cooldown<=0){this.spawnEnemy(this.waveQueue.shift());this.cooldown=this.mode==='campaign'?.8:WAVE_CONFIG[this.waveIndex].interval}
    }
   }
   for(const e of this.enemies.values()){
@@ -302,15 +311,15 @@ export class CoopRoom {
    const sprintLunge=e.lunge>0?(e.kind==='runner'?1.33:e.kind==='brute'?1.38:1.25):1;
    const sp=Math.min(cfg.speed*1.7,cfg.speed*(1+surge*clamp(1-d/20,0,1))*sprintLunge);
    if(d>cfg.range){const nx=e.x+vx*sp*dt,nz=e.z+vz*sp*dt;
-    if(!obstructed(nx,nz,cfg.radius)){e.x=nx;e.z=nz}else{
+    if(!this.isObstructed(nx,nz,cfg.radius)){e.x=nx;e.z=nz}else{
      const sx=-vz,sz=vx;
-     if(!obstructed(e.x+sx*sp*dt,e.z+sz*sp*dt,cfg.radius)){e.x+=sx*sp*dt;e.z+=sz*sp*dt}
+     if(!this.isObstructed(e.x+sx*sp*dt,e.z+sz*sp*dt,cfg.radius)){e.x+=sx*sp*dt;e.z+=sz*sp*dt}
     }
    }
    e.attack-=dt;
    if(d<=cfg.range&&e.attack<=0){this.damage(target,cfg.damage);e.attack=cfg.cool}
   }
-  if(this.phase==='playing'&&this.waveQueue.length===0&&this.enemies.size===0){
+  if(this.mode!=='campaign'&&this.phase==='playing'&&this.waveQueue.length===0&&this.enemies.size===0){
    if(this.intermission<0){this.intermission=6;this.broadcast({t:'intermission',seconds:6,wave:this.waveIndex+1})}
    else{this.intermission-=dt;if(this.intermission<=0)this.nextWave()}
   }
@@ -321,13 +330,23 @@ export class CoopRoom {
    if(this.extractionHold>=7){this.finish('victory','구조 헬기 확보');return}
    if(this.extractionTimer<=0){this.finish('defeat','구조 신호 소멸');return}
   }
+  if(this.mode==='campaign'){
+   const event=advanceCampaign(this.campaign,dt,{players:[...this.players.values()],enemies:this.enemies.size,queued:this.waveQueue.length});
+   if(event==='combat'){this.waveQueue=campaignQueue(this.campaign.stage);this.cooldown=.6}
+   if(event==='checkpoint'){
+    this.waveIndex=this.campaign.stage;
+    for(const p of this.players.values())if(p.connected&&!p.dead){p.health=Math.min(100,p.health+35);p.armor=Math.min(75,p.armor+25);p.reserve.rifle=Math.max(p.reserve.rifle,180);p.reserve.shotgun=Math.max(p.reserve.shotgun,40)}
+   }
+   if(event)this.broadcast({t:'campaign',event,campaign:{...this.campaign}});
+   if(event==='victory'){this.finish('victory','서울 탈출 성공 · 한강 대피소 도착');return}
+  }
   if(this.tickCounter%2===0)this.broadcast(this.snapshot());
  }
  finish(phase,reason){
   this.phase=phase;this.broadcast({t:'end',phase,reason,score:this.score,kills:this.totalKills,wave:this.waveIndex+1});
  }
  snapshot(){
-  return{t:'state',at:this.now(),code:this.code,phase:this.phase,wave:this.waveIndex+1,
+  return{t:'state',mode:this.mode,campaign:this.mode==='campaign'?{...this.campaign}:null,at:this.now(),code:this.code,phase:this.phase,wave:this.waveIndex+1,
    queued:this.waveQueue.length,kills:this.totalKills,score:this.score,intermission:Math.max(0,this.intermission),
    extraction:{visible:this.phase==='extraction',remaining:this.extractionTimer,hold:this.extractionHold,x:0,z:-45},
    players:[...this.players.values()].map(p=>({
