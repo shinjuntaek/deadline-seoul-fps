@@ -1,0 +1,33 @@
+'use strict';
+const fs=require('node:fs'),path=require('node:path');
+const root=path.resolve(__dirname,'..'),file=path.join(root,'dist/game.js');
+let js=fs.readFileSync(file,'utf8');
+const read=name=>fs.readFileSync(path.join(root,name),'utf8');
+function edit(a,b){if(js.split(a).length!==2)throw Error('Stability marker: '+a.slice(0,90));js=js.replace(a,b)}
+function replaceFunction(name,next,source){const start=js.indexOf('function '+name+'('),end=js.indexOf('function '+next+'(',start);if(start<0||end<0)throw Error(name);js=js.slice(0,start)+source+'\n'+js.slice(end)}
+replaceFunction('coopDisconnect','coopOpenPanel',read('client/disconnect.js'));
+replaceFunction('coopLaunch','coopRenderLobby',read('client/launch.js'));
+edit('coopStartUI();','coopStartUI();\n'+read('client/session.js')+'\n'+read('multiplayer/interpolation.mjs').replace(/export /g,''));
+edit("if(m.t==='joined'){","if(m.t==='resume'){\n  if(['playing','extraction'].includes(m.phase))coopEnter(m.state,true);\n  else if(['victory','defeat'].includes(m.phase)){coopEnter(m.state,true);coopReceive({...m.state,t:'end',reason:'작전 종료'})}\n  return;\n }\n if(m.t==='joined'){");
+edit('coop.playerId=m.playerId;coop.token=m.token;coop.code=m.code;','coop.playerId=m.playerId;coop.token=m.token;coop.code=m.code;coopSaveSession();coop.needsReconnect=false;coop.retryAt=0;coop.retries=0;');
+const start=js.indexOf(" if(m.t==='start'){");const end=js.indexOf(" if(m.t==='wave')",start);
+js=js.slice(0,start)+" if(m.t==='start'){coopEnter(null);return}\n"+js.slice(end);
+edit("if(m.t==='error'){","if(m.t==='error'){\n  if(coop.desiredAction==='resume'&&['ROOM_NOT_FOUND','SESSION_EXPIRED','MATCH_IN_PROGRESS'].includes(m.code)){\n   coopMsg('기존 방을 복구하지 못했습니다 · '+m.code);\n   const ws=coop.ws;coop.ws=null;clearInterval(coop.heartbeat);if(ws)ws.close();\n   if(m.code==='ROOM_NOT_FOUND'){coopScheduleReconnect()}else{coopDisconnect();coopMsg('기존 작전이 만료되었습니다. 새 방을 만들어 주세요.')}return;\n  }");
+edit("ready.disabled=!me;","ready.disabled=!me||info.phase!=='lobby';");
+edit("info.players.every(p=>p.ready)","info.players.filter(p=>p.connected).every(p=>p.ready)");
+edit("if(o.geometry)o.geometry.dispose();","if(o.geometry&&!o.isSprite)o.geometry.dispose();");
+edit('if(o.material.map)o.material.map.dispose();','if(o.isSprite&&o.material.map)o.material.map.dispose();');
+edit('stats.wave=Math.max(1,state.wave);',"const arrival=performance.now(),offset=arrival-state.at;\n if(coop.clockOffset===null)coop.clockOffset=offset;else coop.clockOffset+=Math.max(-2,Math.min(2,offset-coop.clockOffset))*.1;\n stats.wave=Math.max(1,state.wave);");
+edit('z.hp=e.hp;z.max=e.max;',"appendMotion(z.netSamples||(z.netSamples=[]),{at:state.at,x:e.x,z:e.z,yaw:e.yaw});\n  z.hp=e.hp;z.max=e.max;");
+edit('g.userData.goal={x:p.x',"appendMotion(g.userData.netSamples||(g.userData.netSamples=[]),{at:state.at,x:p.x,z:p.z,yaw:p.yaw});\n  g.userData.goal={x:p.x");
+edit('z.group.position.lerp(z.serverTarget,Math.min(1,dt*9));',"const remote=sampleMotion(z.netSamples||[],now-(coop.clockOffset||0)-110,z.profile.speed*1.7);\n  if(remote){z.group.position.set(remote.x,0,remote.z);z.remoteYaw=remote.yaw}");
+edit('g.position.x+=(goal.x-g.position.x)*Math.min(1,dt*12);\n  g.position.z+=(goal.z-g.position.z)*Math.min(1,dt*12);\n  g.rotation.y=goal.yaw;',"const remote=sampleMotion(g.userData.netSamples||[],now-(coop.clockOffset||0)-110);\n  if(remote){g.position.x=remote.x;g.position.z=remote.z;g.rotation.y=remote.yaw}");
+edit('const dt=Math.min(clock.getDelta(),.05);',"const rawDt=clock.getDelta(),dt=Math.min(rawDt,.05);");
+edit('fpsTime+=dt;','fpsTime+=rawDt;');
+// The server can end a co-op match while this client is locally paused.
+edit("function finish(win){if(phase!=='playing')return;","function finish(win){if(phase!=='playing'&&!(coop.active&&coop.ended&&phase==='paused'))return;dom.pause.classList.add('hidden');");
+edit('Math.round(1/Math.max(dt,.0001))','Math.round(1/Math.max(rawDt,.0001))');
+edit("ping:coop.ping,enemies:coop.enemyMeshes.size", "ping:coop.ping,enemies:coop.enemyMeshes.size,reconnecting:coop.needsReconnect,disconnects:coop.disconnects,lastClose:coop.lastClose,ageMs:Math.round(performance.now()-coop.lastSeen)");
+edit("'<small>Preview 실험 기능 · 서버 인스턴스가 달라지면 방 참가에 실패할 수 있습니다.</small>'+", "'<small>협동 Preview · 방 연결이 실패할 수 있습니다. 연결 단절 시 최대 28초 동안 복구를 시도합니다.</small>'+");
+fs.writeFileSync(file,js);
+console.log('STABILITY_CLIENT_READY');

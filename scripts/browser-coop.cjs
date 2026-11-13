@@ -77,7 +77,7 @@ async function waitWS(ws,condition,timeout=7000){
    await page.mouse.move(b.x+b.width/2,b.y+b.height/2);
    await page.mouse.down();await pause(160);await page.mouse.up();
   }catch(e){result.errors.push('mouse firing: '+e.message)}
-  await page.waitForTimeout(450);
+  await page.waitForFunction(previous=>Number(document.querySelector('#ammo').textContent)<previous,before,{timeout:8000});
   const after=Number(await page.locator('#ammo').innerText());
   step('Browser click produces authoritative rifle shot',before===30&&after<before,{before,after});
   const snap=await waitWS(ws,m=>m.t==='state'&&m.players.some(p=>p.id===status.playerId&&p.ammo.rifle<30),15000);
