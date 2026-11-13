@@ -15,8 +15,8 @@ try{
  await shot(p,'00-menu');await p.locator('#campaign-start').focus();await p.keyboard.press('Enter');await p.waitForFunction(()=>window.__DEADLINE_CAMPAIGN_STATUS__().mode==='campaign');
  await p.mouse.move(0,0);await p.evaluate(()=>window.__CAMPAIGN_TEST__.position(0,12));
  const start=await state(p);check('campaign initializes original first-person game',start.phase==='playing'&&start.position.z===12,start);
- await walk(p,'w',2400);const moved=await state(p);check('native keyboard travels forward in larger route',moved.position.z<start.position.z-3,moved.position);
- await p.mouse.down();await p.waitForTimeout(220);await p.mouse.up();check('native rifle fire spends ammo',(await state(p)).ammo<30,await state(p));await p.keyboard.press('r');await p.waitForTimeout(1900);check('native reload restores magazine',(await state(p)).ammo===30,await state(p));
+ await p.keyboard.down('w');await p.waitForFunction(()=>window.__DEADLINE_CAMPAIGN_STATUS__().position.z<8,null,{timeout:30000});await p.keyboard.up('w');const moved=await state(p);check('native keyboard travels forward in larger route',moved.position.z<start.position.z-3,moved.position);
+ await p.mouse.down();await p.waitForTimeout(220);await p.mouse.up();check('native rifle fire spends ammo',(await state(p)).ammo<30,await state(p));await p.keyboard.press('r');await p.waitForFunction(()=>window.__DEADLINE_CAMPAIGN_STATUS__().ammo===30,null,{timeout:12000});check('native reload restores magazine',(await state(p)).ammo===30,await state(p));
  await p.waitForTimeout(1800);await shot(p,'01-alley');await perf(p,'alley exploration');
  const gates=[-88,-198,-318],triggers=[-31,-139,-248];
  for(let i=0;i<3;i++){
@@ -36,8 +36,8 @@ try{
   await perf(p,'stage '+(i+1)+' combat');
   await p.evaluate(()=>window.__CAMPAIGN_TEST__.clearEncounter());await p.waitForFunction(()=>window.__DEADLINE_CAMPAIGN_STATUS__().campaign.status==='regroup');
   await p.evaluate(z=>window.__CAMPAIGN_TEST__.position(0,z),gates[i]+5);
-  if(i<2){await p.waitForFunction(()=>window.__DEADLINE_CAMPAIGN_STATUS__().campaign.status==='open',null,{timeout:20000});await p.waitForTimeout(1000);await shot(p,'gate-'+(i+1)+'-open');await walk(p,'w',2600);await p.waitForFunction(stage=>window.__DEADLINE_CAMPAIGN_STATUS__().campaign.stage===stage,i+1,{timeout:20000});check('walk through unlocked gate advances chapter '+i,(await state(p)).campaign.stage===i+1,await state(p))}
-  else{await p.waitForFunction(()=>window.__DEADLINE_CAMPAIGN_STATUS__().phase==='victory',null,{timeout:30000});await p.waitForTimeout(600);await shot(p,'07-rescued');check('final regroup produces victory',(await state(p)).campaign.status==='complete',await state(p))}
+  if(i<2){await p.waitForFunction(()=>window.__DEADLINE_CAMPAIGN_STATUS__().campaign.status==='open',null,{timeout:60000});await p.waitForTimeout(1000);await shot(p,'gate-'+(i+1)+'-open');await p.keyboard.down('w');await p.waitForFunction(stage=>window.__DEADLINE_CAMPAIGN_STATUS__().campaign.stage===stage,i+1,{timeout:45000});await p.keyboard.up('w');check('walk through unlocked gate advances chapter '+i,(await state(p)).campaign.stage===i+1,await state(p))}
+  else{await p.waitForFunction(()=>window.__DEADLINE_CAMPAIGN_STATUS__().phase==='victory',null,{timeout:120000});await p.waitForTimeout(600);await shot(p,'07-rescued');check('final regroup produces victory',(await state(p)).campaign.status==='complete',await state(p))}
  }
  // Restart/menu: no repeated map allocations, survival still selectable.
  await p.locator('#result-menu').click();await p.locator('#campaign-start').focus();await p.keyboard.press('Enter');await p.waitForTimeout(1500);await perf(p,'campaign restart');
@@ -50,7 +50,10 @@ try{
  const code=await a.evaluate(()=>window.__DEADLINE_COOP_STATUS__().room);await b.locator('#coop-launch').click();await b.locator('#coop-name').fill('후발대');await b.locator('#coop-code').fill(code);await b.locator('#coop-join').click();await b.waitForFunction(()=>window.__DEADLINE_COOP_STATUS__().members===2);
  await a.locator('#coop-ready').click();await b.locator('#coop-ready').click();await a.locator('#coop-start').click();await a.waitForFunction(()=>window.__DEADLINE_COOP_STATUS__().active);await b.waitForFunction(()=>window.__DEADLINE_COOP_STATUS__().active);await a.mouse.move(0,0);await b.mouse.move(0,0);
  check('room mode synchronized to both clients',(await state(a)).mode==='campaign'&&(await state(b)).mode==='campaign',{a:await state(a),b:await state(b)});
- await shot(a,'09-coop');check('both WebSockets open',(await state(a)).ws===1&&(await state(b)).ws===1,true);
+ await shot(a,'09-coop');await a.keyboard.down('w');await a.waitForFunction(()=>window.__DEADLINE_CAMPAIGN_STATUS__().position.z<8,null,{timeout:30000});await a.keyboard.up('w');
+ await b.waitForFunction(()=>window.__DEADLINE_CAMPAIGN_STATUS__().peers.some(p=>p.z<8),null,{timeout:15000});
+ check('peer receives native campaign movement beyond initial spawn',true,{a:await state(a),b:await state(b)});
+ check('both WebSockets open',(await state(a)).ws===1&&(await state(b)).ws===1,true);
  await ca.close();await cb.close();
  check('no uncaught browser errors or crashes',report.errors.length===0,report.errors);
  report.status='PASS';

@@ -71,3 +71,13 @@ test('Actual four simultaneous websocket clients share lobby, start and server w
   await new Promise(resolve=>server.close(resolve));
  }
 });
+test('campaign mode is server-owned and reconnect supplies full stage snapshot',{timeout:12000},async()=>{
+ await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
+ const url='ws://127.0.0.1:'+server.address().port+'/api/multiplayer',clients=[];
+ try{
+  const a=await connect(url),b=await connect(url);clients.push(a,b);send(a,{t:'create',name:'A',mode:'campaign'});const joined=await seen(a,m=>m.t==='joined');assert.equal(joined.mode,'campaign');
+  send(b,{t:'join',name:'B',code:joined.code,mode:'survival'});await seen(b,m=>m.t==='joined');send(a,{t:'ready',value:true});send(b,{t:'ready',value:true});await seen(a,m=>m.t==='lobby'&&m.players.length===2&&m.players.every(p=>p.ready));send(a,{t:'start'});
+  assert.equal((await seen(b,m=>m.t==='start')).mode,'campaign');const state=await seen(a,m=>m.t==='state');assert.equal(state.campaign.stage,0);assert.equal(state.players[0].z,12);
+  a.ws.close();await wait(120);const c=await connect(url);clients.push(c);send(c,{t:'join',name:'A',code:joined.code,resumeToken:joined.token});const resumed=await seen(c,m=>m.t==='resume');assert.equal(resumed.state.mode,'campaign');assert.equal(resumed.state.campaign.status,'travel');assert.equal((await seen(c,m=>m.t==='joined')).playerId,joined.playerId);
+ }finally{for(const c of clients)c.ws.close();await wait(100);await new Promise(r=>server.close(r))}
+});

@@ -279,7 +279,11 @@ export class CoopRoom {
    }
   }
   const fighters=[...this.players.values()].filter(p=>p.connected&&!p.downed&&!p.dead);
-  if(fighters.length===0){this.finish('defeat','모든 요원 전투 불능');return}
+  if(fighters.length===0){
+   const reconnecting=[...this.players.values()].some(p=>!p.connected&&!p.dead&&!p.downed&&p.leftAt&&now-p.leftAt<30000);
+   if(reconnecting)return;
+   this.finish('defeat','모든 요원 전투 불능');return
+  }
   if(this.phase==='playing'){
    const cap=Math.min(22,6+fighters.length*4);
    if(this.waveQueue.length&&this.enemies.size<cap){

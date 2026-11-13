@@ -187,6 +187,8 @@ const modeLabel=document.createElement('label');modeLabel.textContent='방 작�
 const originalCoopReceive=coopReceive;coopReceive=function(m){
  if(m.t==='start'||m.t==='resume')selectedMode=m.mode==='campaign'?'campaign':'survival';
  if(m.t==='resume'){
+  for(const e of coop.enemyMeshes.values())coopDisposeZombie(e);coop.enemyMeshes.clear();
+  for(const g of coop.teammates.values())coopDisposeTeammate(g);coop.teammates.clear();
   coop.active=true;coop.ended=false;coop.needsReconnect=false;coopClosePanel();startRun();clearRun();
   if(m.state.campaign)campaign={...m.state.campaign};const me=m.state.players.find(p=>p.id===coop.playerId);if(me){camera.position.set(me.x,PLAYER.height,me.z);yaw=me.yaw;pitch=me.pitch}
   coop.lastState=m.state;coopApplySnapshot(m.state);return;
@@ -195,7 +197,7 @@ const originalCoopReceive=coopReceive;coopReceive=function(m){
  if(m.t==='state'&&m.campaign)campaign={...m.campaign};
  originalCoopReceive(m);
 };
-window.__DEADLINE_CAMPAIGN_STATUS__=()=>({mode:selectedMode,phase,campaign:{...campaign},position:{x:camera.position.x,z:camera.position.z},yaw,pitch,health,armor,ammo:stateWeapon().ammo,queued:spawnQueue.length,enemies:enemies.filter(e=>!e.dead).length,kills:stats.kills,quality,softwareGPU,gpu:gpuRendererName,width:innerWidth,height:innerHeight,renderScale,calls:renderer.info.render.calls,triangles:renderer.info.render.triangles,geometries:renderer.info.memory.geometries,textures:renderer.info.memory.textures,ws:coop.ws?.readyState??null});
+window.__DEADLINE_CAMPAIGN_STATUS__=()=>({mode:selectedMode,phase,campaign:{...campaign},position:{x:camera.position.x,z:camera.position.z},yaw,pitch,health,armor,ammo:stateWeapon().ammo,queued:spawnQueue.length,enemies:enemies.filter(e=>!e.dead).length,kills:stats.kills,quality,softwareGPU,gpu:gpuRendererName,width:innerWidth,height:innerHeight,renderScale,calls:renderer.info.render.calls,triangles:renderer.info.render.triangles,geometries:renderer.info.memory.geometries,textures:renderer.info.memory.textures,ws:coop.ws?.readyState??null,peers:coop.lastState?.players.map(p=>({id:p.id,x:p.x,z:p.z,connected:p.connected}))||[]});
 // Only loopback CI may drive deterministic stage states. No remote cheats in Preview.
 if(['127.0.0.1','localhost'].includes(location.hostname)&&new URLSearchParams(location.search).has('campaignQA')){
  window.__CAMPAIGN_TEST__={

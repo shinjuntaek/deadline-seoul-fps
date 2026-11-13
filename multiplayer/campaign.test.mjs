@@ -52,3 +52,6 @@ test('authoritative full campaign, all-team exits, resupply, final victory; surv
  }
  assert.equal(new CoopRoom('ABC236').mode,'survival');
 });
+test('brief total disconnection preserves campaign; downed team still loses',()=>{
+ let now=10000;const r=new CoopRoom('ABC237',{mode:'campaign',now:()=>now});const a=r.add('a','A',()=>{}),b=r.add('b','B',()=>{});r.ready(a.playerId,true);r.ready(b.playerId,true);r.start(a.playerId);r.remove('a');r.remove('b');now+=500;r.tick(.05);assert.equal(r.phase,'playing');assert(r.add('a2','A',()=>{},a.token).resumed);r.tick(.05);assert.equal(r.phase,'playing');r.players.get(a.playerId).downed=true;r.players.get(b.playerId).dead=true;r.tick(.05);assert.equal(r.phase,'defeat');
+});
