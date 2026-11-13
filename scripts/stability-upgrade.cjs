@@ -24,6 +24,8 @@ edit('z.group.position.lerp(z.serverTarget,Math.min(1,dt*9));',"const remote=sam
 edit('g.position.x+=(goal.x-g.position.x)*Math.min(1,dt*12);\n  g.position.z+=(goal.z-g.position.z)*Math.min(1,dt*12);\n  g.rotation.y=goal.yaw;',"const remote=sampleMotion(g.userData.netSamples||[],now-(coop.clockOffset||0)-110);\n  if(remote){g.position.x=remote.x;g.position.z=remote.z;g.rotation.y=remote.yaw}");
 edit('const dt=Math.min(clock.getDelta(),.05);',"const rawDt=clock.getDelta(),dt=Math.min(rawDt,.05);");
 edit('fpsTime+=dt;','fpsTime+=rawDt;');
+// The server can end a co-op match while this client is locally paused.
+edit("function finish(win){if(phase!=='playing')return;","function finish(win){if(phase!=='playing'&&!(coop.active&&coop.ended&&phase==='paused'))return;dom.pause.classList.add('hidden');");
 edit('Math.round(1/Math.max(dt,.0001))','Math.round(1/Math.max(rawDt,.0001))');
 edit("ping:coop.ping,enemies:coop.enemyMeshes.size", "ping:coop.ping,enemies:coop.enemyMeshes.size,reconnecting:coop.needsReconnect,disconnects:coop.disconnects,lastClose:coop.lastClose,ageMs:Math.round(performance.now()-coop.lastSeen)");
 edit("'<small>Preview 실험 기능 · 서버 인스턴스가 달라지면 방 참가에 실패할 수 있습니다.</small>'+", "'<small>협동 Preview · 방 연결이 실패할 수 있습니다. 연결 단절 시 최대 28초 동안 복구를 시도합니다.</small>'+");
