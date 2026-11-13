@@ -79,3 +79,10 @@ confirmation. No paid generation was submitted and no subscription purchased.
 The fal Tripo H3.1 standard-texture 10k-face candidate submission was blocked by automatic approval review before a job ID was issued because its specific paid charge was not approved. No retry or charge was made. Official public pricing lists $0.20 for standard textures, excluding later rigging. Source: https://fal.ai/models/tripo3d/h3.1/text-to-3d
 
 Two-browser CI verified reload reconnect, then reproduced an unreachable close button at 640×420. The dialog now uses bounded internal scrolling instead of centering oversized content outside the viewport. Initial camera orientation is also set synchronously and faces the street, including after resume. Shared fabric textures are excluded from teammate cleanup.
+
+Screenshot review caught an initial pointer-lock cursor warp that tilted the view
+upward despite a level reset. The first lock-acquisition delta is discarded;
+read-only camera diagnostics and a level-view browser assertion cover this case.
+An actual 160 ms mouse press also exposed an input loss when a slow rendered
+frame missed the entire held interval. Mouse-down now fires immediately through
+the existing cooldown-checked shooting path, matching the touch control.

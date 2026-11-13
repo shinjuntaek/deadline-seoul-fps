@@ -18,6 +18,8 @@ edit('src.x+=(Math.random()-.5)*4;src.z+=(Math.random()-.5)*4;createEnemy(kind,s
 edit("yaw=Math.PI;pitch=0;camera.position.set(0,PLAYER.height,27);","yaw=0;pitch=0;camera.rotation.set(0,0,0,'YXZ');camera.position.set(0,PLAYER.height,27);");
 // Pointer lock can emit a cursor-recentering delta when acquired. It is not aim input.
 edit("document.addEventListener('mousemove',e=>{if(phase!=='playing'||coarse||document.pointerLockElement!==dom.game)return;", "let discardLockWarp=false;document.addEventListener('pointerlockchange',()=>{discardLockWarp=document.pointerLockElement===dom.game});\ndocument.addEventListener('mousemove',e=>{if(phase!=='playing'||coarse||document.pointerLockElement!==dom.game)return;if(discardLockWarp){discardLockWarp=false;return;}");
+// Match touch-fire: a short mouse press must not disappear between slow frames.
+edit("if(e.button===0)fireHeld=true;", "if(e.button===0){fireHeld=true;shoot(performance.now());}");
 fs.writeFileSync(file,js);console.log('SEOUL_CINEMATIC_MATERIALS_READY');
 
 fs.appendFileSync(path.join(root,'dist/style.css'), '\n.coop-panel{align-items:flex-start}.coop-card{margin:auto;box-sizing:border-box;max-height:calc(100dvh - 32px);overflow:auto;overscroll-behavior:contain}\n@media(max-width:600px){.coop-card{max-height:calc(100dvh - 18px)}}\n');
