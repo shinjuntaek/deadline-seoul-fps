@@ -36,3 +36,19 @@ test('campaign server mode, extended movement, spawn, snapshot and reconnect',()
  const enemy=room.spawnEnemy('walker');assert(enemy.z<-160);assert(!room.isObstructed(enemy.x,enemy.z));
  room.remove('a');const resume=room.add('a2','A',()=>{},a.token);assert(resume.resumed);assert.equal(room.snapshot().campaign.stage,1);
 });
+test('authoritative full campaign, all-team exits, resupply, final victory; survival untouched',()=>{
+ let now=10000;const room=new CoopRoom('ABC235',{mode:'campaign',now:()=>now,rng:()=>.4});
+ const a=room.add('a','A',()=>{}),b=room.add('b','B',()=>{});room.ready(a.playerId,true);room.ready(b.playerId,true);room.start(a.playerId);
+ const players=[...room.players.values()];
+ for(let i=0;i<3;i++){
+  const s=CAMPAIGN_STAGES[i];for(const p of players){p.x=0;p.z=s.trigger-1}
+  now+=50;room.tick(.05);assert.equal(room.campaign.status,'combat');assert(room.waveQueue.length>0);
+  // Synthetic combat completion isolates progression; real shots are browser-tested.
+  room.waveQueue=[];room.enemies.clear();room.tick(.05);assert.equal(room.campaign.status,'regroup');
+  players[0].z=s.gate+5;room.tick(.05);assert.equal(room.campaign.hold,0);
+  for(const p of players)p.z=s.gate+5;
+  for(let n=0;n<170;n++){now+=50;room.tick(.05)}
+  if(i<2){assert.equal(room.campaign.status,'open');for(const p of players){p.z=s.gate-3;p.health=45;p.armor=0;p.reserve.rifle=0}room.tick(.05);assert.equal(room.campaign.stage,i+1);assert.equal(players[0].health,80);assert.equal(players[0].reserve.rifle,180)}else assert.equal(room.phase,'victory');
+ }
+ assert.equal(new CoopRoom('ABC236').mode,'survival');
+});

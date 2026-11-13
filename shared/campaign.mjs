@@ -22,6 +22,7 @@ export function routeWidth(z){
 export function campaignBlocked(x,z,r=.38,state={stage:0,status:'travel'}){
  if(!Number.isFinite(x)||!Number.isFinite(z)||z>19-r||z<-332+r||Math.abs(x)>routeWidth(z)-r)return true;
  for(const b of CAMPAIGN_BLOCKS)if(Math.abs(x-b.x)<b.w/2+r&&Math.abs(z-b.z)<b.d/2+r)return true;
+ for(const s of CAMPAIGN_STAGES)if(Math.abs(z-s.gate)<.35+r&&Math.abs(x)>5.8-r)return true;
  const gate=CAMPAIGN_STAGES[state.stage]?.gate??-318;
  if(state.status!=='open'&&state.status!=='complete'&&z<gate+r)return true;
  // Future gates remain closed even after this stage opens.
