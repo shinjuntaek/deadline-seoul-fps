@@ -3,7 +3,7 @@ const{chromium,devices}=require('playwright');const fs=require('node:fs');const 
 const out='browser-qa/campaign';fs.mkdirSync(out,{recursive:true});
 const base=process.env.GAME_BASE_URL||'http://127.0.0.1:4173';
 const report={environment:'GitHub Actions Ubuntu / real Chromium / SwiftShader software WebGL; mobile is viewport+touch emulation, not hardware',method:'Native keyboard/mouse/touch checks. Stage progression uses explicitly labelled loopback-only test positioning and enemy clearing; not an unaided full campaign clear.',steps:[],errors:[],screenshots:[],performance:[]};
-const check=(name,ok,data)=>{report.steps.push({name,pass:!!ok,data});assert(ok,name+': '+JSON.stringify(data))};
+const check=(name,ok,data)=>{console.log('CAMPAIGN_CHECK',name,!!ok);report.steps.push({name,pass:!!ok,data});assert(ok,name+': '+JSON.stringify(data))};
 const state=p=>p.evaluate(()=>window.__DEADLINE_CAMPAIGN_STATUS__());
 async function shot(p,name){const file=out+'/'+name+'.png';await p.screenshot({path:file});report.screenshots.push(file)}
 async function open(c){const p=await c.newPage();p.on('pageerror',e=>report.errors.push(e.message));p.on('crash',()=>report.errors.push('PAGE_CRASH'));await p.goto(base+'/?campaignQA=1',{waitUntil:'domcontentloaded'});await p.waitForFunction(()=>window.__DEADLINE_CAMPAIGN_STATUS__,null,{timeout:60000});return p}
@@ -22,7 +22,6 @@ try{
  for(let i=0;i<3;i++){
   await p.evaluate(z=>window.__CAMPAIGN_TEST__.position(0,z),triggers[i]-1);await p.waitForFunction(()=>window.__DEADLINE_CAMPAIGN_STATUS__().campaign.status==='combat');await p.waitForFunction(()=>window.__DEADLINE_CAMPAIGN_STATUS__().enemies>0,null,{timeout:30000});
   check('stage '+(i+1)+' movement trigger starts horde',(await state(p)).enemies>0,await state(p));
-  await shot(p,'0'+(i+2)+'-stage-'+(i+1)+'-combat');
   if(i===0){
    const before=(await state(p)).kills;
    // Test-assisted aim, actual mouse firing and actual game hit detection/AI.
@@ -33,7 +32,7 @@ try{
    check('actual raycast shooting kills a moving campaign zombie',(await state(p)).kills>before,await state(p));
   }
   const locked=await p.evaluate(z=>{try{window.__CAMPAIGN_TEST__.position(0,z);return false}catch{return true}},gates[i]-1);check('locked gate prevents skipping combat '+i,locked);
-  await perf(p,'stage '+(i+1)+' combat');
+  await perf(p,'stage '+(i+1)+' combat');await p.waitForFunction(()=>!document.getElementById('wave-banner').classList.contains('show'),null,{timeout:30000});await shot(p,'0'+(i+2)+'-stage-'+(i+1)+'-combat');
   await p.evaluate(()=>window.__CAMPAIGN_TEST__.clearEncounter());await p.waitForFunction(()=>window.__DEADLINE_CAMPAIGN_STATUS__().campaign.status==='regroup');
   await p.evaluate(z=>window.__CAMPAIGN_TEST__.position(0,z),gates[i]+5);
   if(i<2){await p.waitForFunction(()=>window.__DEADLINE_CAMPAIGN_STATUS__().campaign.status==='open',null,{timeout:60000});await p.waitForTimeout(1000);await shot(p,'gate-'+(i+1)+'-open');await p.keyboard.down('w');await p.waitForFunction(stage=>window.__DEADLINE_CAMPAIGN_STATUS__().campaign.stage===stage,i+1,{timeout:45000});await p.keyboard.up('w');check('walk through unlocked gate advances chapter '+i,(await state(p)).campaign.stage===i+1,await state(p))}
@@ -48,7 +47,7 @@ try{
  const ca=await browser.newContext({viewport:{width:960,height:640}}),cb=await browser.newContext({viewport:{width:960,height:640}});const a=await open(ca),b=await open(cb);
  await a.locator('#coop-launch').click();await a.locator('#coop-mode').selectOption('campaign');await a.locator('#coop-name').fill('선발대');await a.locator('#coop-create').click();await a.waitForFunction(()=>window.__DEADLINE_COOP_STATUS__().room);
  const code=await a.evaluate(()=>window.__DEADLINE_COOP_STATUS__().room);await b.locator('#coop-launch').click();await b.locator('#coop-name').fill('후발대');await b.locator('#coop-code').fill(code);await b.locator('#coop-join').click();await b.waitForFunction(()=>window.__DEADLINE_COOP_STATUS__().members===2);
- await a.locator('#coop-ready').click();await b.locator('#coop-ready').click();await a.locator('#coop-start').click();await a.waitForFunction(()=>window.__DEADLINE_COOP_STATUS__().active);await b.waitForFunction(()=>window.__DEADLINE_COOP_STATUS__().active);await a.mouse.move(0,0);await b.mouse.move(0,0);
+ await a.locator('#coop-ready').click();await b.locator('#coop-ready').click();await a.locator('#coop-start').click();await a.waitForFunction(()=>window.__DEADLINE_COOP_STATUS__().active);await b.waitForFunction(()=>window.__DEADLINE_COOP_STATUS__().active);await a.mouse.move(0,0);await b.mouse.move(0,0);await a.evaluate(()=>window.__CAMPAIGN_TEST__.aim(0,-30,1.72));await b.evaluate(()=>window.__CAMPAIGN_TEST__.aim(0,-30,1.72));
  check('room mode synchronized to both clients',(await state(a)).mode==='campaign'&&(await state(b)).mode==='campaign',{a:await state(a),b:await state(b)});
  await shot(a,'09-coop');await a.keyboard.down('w');await a.waitForFunction(()=>window.__DEADLINE_CAMPAIGN_STATUS__().position.z<8,null,{timeout:30000});await a.keyboard.up('w');
  await b.waitForFunction(()=>window.__DEADLINE_CAMPAIGN_STATUS__().peers.some(p=>p.z<8),null,{timeout:15000});

@@ -6,9 +6,9 @@ const arenaVisibility=new Map(arenaObjects.map(o=>[o,o.visible]));
 const campaignTargets=[],campaignChunks=[],campaignGates=[],campaignLamps=[];
 const campaignBox=new THREE.BoxGeometry(1,1,1),campaignCylinder=new THREE.CylinderGeometry(1,1,1,10);
 const campaignPalette={
- road:new THREE.MeshStandardMaterial({color:0x30393b,map:asphalt,roughness:.63,metalness:.12}),
- concrete:new THREE.MeshStandardMaterial({color:0x566063,map:asphalt,roughness:.95}),
- brick:new THREE.MeshStandardMaterial({color:0x604f48,map:asphalt,roughness:.93}),
+ road:new THREE.MeshStandardMaterial({color:0x9ea9ac,map:asphalt,roughness:.63,metalness:.12}),
+ concrete:new THREE.MeshStandardMaterial({color:0xa6aca6,map:asphalt,roughness:.95}),
+ brick:new THREE.MeshStandardMaterial({color:0xb09280,map:asphalt,roughness:.93}),
  pale:new THREE.MeshStandardMaterial({color:0x7e837e,roughness:.85}),
  iron:new THREE.MeshStandardMaterial({color:0x293337,metalness:.68,roughness:.48}),
  shutter:new THREE.MeshStandardMaterial({color:0x424e50,metalness:.48,roughness:.65}),
@@ -20,7 +20,7 @@ const campaignPalette={
  water:new THREE.MeshStandardMaterial({color:0x172d37,metalness:.6,roughness:.23}),
 };
 // Software rasterizers retain route readability with a cheaper lighting model.
-if(ultraLow)for(const key of Object.keys(campaignPalette)){const m=campaignPalette[key];if(m.isMeshStandardMaterial){campaignPalette[key]=new THREE.MeshLambertMaterial({color:m.color,map:m.map,emissive:m.emissive});m.dispose()}}
+if(ultraLow)for(const key of Object.keys(campaignPalette)){const m=campaignPalette[key];if(m.isMeshStandardMaterial){campaignPalette[key]=new THREE.MeshLambertMaterial({color:m.color,map:m.map,emissive:0x06090b});m.dispose()}}
 function makeCampaignWorld(){
  if(campaignWorld)return;
  campaignWorld=new THREE.Group();campaignWorld.name='SEOUL ESCAPE · 340m connected route';scene.add(campaignWorld);
@@ -95,8 +95,8 @@ function makeCampaignWorld(){
   part(g,bus?'blue':'iron',x,bus?2.72:1.8,z,width*.93,.16,length*.65);
   part(g,'iron',x,.42,z,width+.12,.2,length+.06);
   for(const side of [-1,1]){
-   // Wheels point along X via a box tyre profile with hub insert.
-   for(const dz of [-length*.32,length*.32]){part(g,'tyre',x+side*width*.48,.45,z+dz,.36,.85,.85);part(g,'iron',x+side*(width*.48+.19),.45,z+dz,.05,.4,.4)}
+   // Shared cylinder tyres/hubs, axle along X.
+   for(const dz of [-length*.32,length*.32]){part(g,'tyre',x+side*width*.48,.45,z+dz,.43,.36,.43,0,'wheel');part(g,'iron',x+side*(width*.48+.19),.45,z+dz,.2,.05,.2,0,'wheel')}
    part(g,'lamp',x+side*width*.3,.85,z-length/2-.02,.45,.25,.04);
    part(g,'warm',x+side*width*.3,.85,z+length/2+.02,.4,.18,.04);
   }
@@ -116,7 +116,7 @@ function makeCampaignWorld(){
  for(const g of campaignChunks){
   for(const {key,shape,items}of g.userData.batches.values()){
    const mesh=new THREE.InstancedMesh(shape==='box'?campaignBox:campaignCylinder,campaignPalette[key],items.length);
-   items.forEach((p,i)=>{dummy.position.set(p.x,p.y,p.z);dummy.scale.set(p.w,p.h,p.d);dummy.rotation.set(0,p.rotate,0);dummy.updateMatrix();mesh.setMatrixAt(i,dummy.matrix)});
+   items.forEach((p,i)=>{dummy.position.set(p.x,p.y,p.z);dummy.scale.set(p.w,p.h,p.d);dummy.rotation.set(0,p.rotate,shape==='wheel'?Math.PI/2:0);dummy.updateMatrix();mesh.setMatrixAt(i,dummy.matrix)});
    mesh.instanceMatrix.needsUpdate=true;mesh.computeBoundingSphere();mesh.receiveShadow=true;mesh.castShadow=quality==='high'&&['concrete','brick','pale'].includes(key);g.add(mesh);campaignTargets.push(mesh);
   }
   g.userData.batches.clear();

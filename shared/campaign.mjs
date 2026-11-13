@@ -15,8 +15,8 @@ export const CAMPAIGN_BLOCKS=Object.freeze([
 ]);
 export function routeWidth(z){
  // Wider transition aprons make a continuous corridor with no invisible step.
- if(z<-206)return 23;
- if(z<-92)return 11;
+ if(z<-212.5)return 23;
+ if(z<-96.5)return 11;
  return 18;
 }
 export function campaignBlocked(x,z,r=.38,state={stage:0,status:'travel'}){
