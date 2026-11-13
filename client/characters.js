@@ -23,12 +23,14 @@ Promise.all([import('/vendor/GLTFLoader.js'),import('/vendor/SkeletonUtils.js')]
 }).catch(e=>{humanAssets.error=String(e);console.warn('Skinned character fallback',e)});
 function instantiateHuman(z,lod){
  if(z.human?.lod===lod)return;
+ const previous=z.human?{stride:z.human.stride,blend:z.human.blend,angles:new Map([...z.human.bones].map(([key,item])=>[key,item.angles.clone()]))}:null;
  releaseHuman(z);
  const type=z.kind==='runner'?'infected-civilian':'infected-worker';
  const model=cloneHuman(humanAssets.templates[type+'-'+lod]);model.rotation.y=Math.PI;model.name=type;
  const bones=new Map(),meshes=[];
  model.traverse(o=>{if(o.isBone){bones.set(o.name,{bone:o,rest:o.quaternion.clone(),angles:new THREE.Vector3()})}if(o.isMesh){o.raycast=()=>{};o.castShadow=quality!=='low'&&lod==='near';o.receiveShadow=true;meshes.push(o)}});
  z.group.add(model);z.human={model,bones,meshes,lod,clock:0,prev:z.group.position.clone(),stride:z.phase,blend:0,ownedMaterials:[]};
+ if(previous){z.human.stride=previous.stride;z.human.blend=previous.blend;for(const [key,angles] of previous.angles){const item=bones.get(key);if(item){item.angles.copy(angles);item.bone.quaternion.copy(item.rest).multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(angles.x,angles.y,angles.z)))}}}
 }
 function releaseHuman(z){
  if(!z.human)return;
@@ -71,7 +73,7 @@ function animateHuman(z,dt,near){
   poseHuman(h,'upperleg01_'+side,stride*.37,0,sign*.09,step);
   poseHuman(h,'lowerleg01_'+side,Math.max(0,-stride)*.74,0,0,step);
   poseHuman(h,'foot_'+side,-Math.max(0,stride)*.17,0,0,step);
-  poseHuman(h,'upperarm01_'+side,-.34-stride*.15-attack*.72,0,-sign*.40,step);
+  poseHuman(h,'upperarm01_'+side,-.34-stride*.15-attack*.72,0,sign*.65,step);
   poseHuman(h,'lowerarm01_'+side,-.24-attack*.38,0,0,step);
   poseHuman(h,'wrist_'+side,.12,0,sign*.08,step);
  }
@@ -85,6 +87,8 @@ updateZombieDeath=function(z,dt){
  if(!z.human)return legacyDeath(z,dt);
  if(!z.deathStarted)beginZombieDeath(z,false);
  z.death+=dt;const t=z.death,h=z.human;
+ poseHuman(h,'spine01',.32,0,z.deathSide*.10,dt);
+ for(const side of ['L','R']){poseHuman(h,'upperleg01_'+side,.35,0,0,dt);poseHuman(h,'lowerleg01_'+side,.75,0,0,dt);}
  z.deathPhase=t<.22?'stagger':t<.80?'fall':t<5.5?'down':'fade';
  const fall=THREE.MathUtils.smoothstep(t,.16,.85);
  h.model.rotation.x=-Math.PI/2*fall;h.model.rotation.z=z.deathSide*.13*fall;

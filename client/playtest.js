@@ -18,7 +18,7 @@ if(['localhost','127.0.0.1'].includes(location.hostname)&&new URLSearchParams(lo
  };
  window.__DEADLINE_PLAYTEST__={
   ready:()=>humanAssets.ready,
-  stage(){startRun();clearRun();spawnQueue=[];waveIndex=0;stats.wave=1;nextWave=-1;camera.position.set(0,PLAYER.height,24);yaw=0;pitch=0;camera.rotation.set(0,0,0,'YXZ');
+  stage(){if(phase==='playing')resetRun();else startRun();clearRun();spawnQueue=[];waveIndex=0;stats.wave=1;nextWave=-1;camera.position.set(0,PLAYER.height,24);yaw=0;pitch=0;camera.rotation.set(0,0,0,'YXZ');
    for(const [kind,x,z] of [['walker',-2.0,17],['runner',2.1,15],['walker',-.3,10],['runner',-4,6],['walker',4,4]])createEnemy(kind,new THREE.Vector3(x,0,z));
    initialProps();return this.state();},
   aimAtEnemy(){const z=enemies.find(z=>!z.dead);if(!z)return;const d=z.group.position.clone().sub(camera.position);yaw=Math.atan2(-d.x,-d.z);pitch=Math.atan2(2.02*z.profile.scale-camera.position.y,Math.hypot(d.x,d.z));},

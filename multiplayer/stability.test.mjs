@@ -4,6 +4,7 @@ import vm from 'node:vm';
 import fs from 'node:fs';
 import {CoopRoom,SPAWN_POINTS,obstructed,ENEMY_PROFILE} from './coop-engine.mjs';
 import {sampleMotion,appendMotion} from './interpolation.mjs';
+import {Euler,Vector3} from 'three';
 const setup=()=>{
  let now=100000;const room=new CoopRoom('ABCDEF',{now:()=>now,rng:()=>.5});
  const a=room.add('a','A',()=>{}),b=room.add('b','B',()=>{});
@@ -44,6 +45,16 @@ test('Interpolation crosses the short rotation arc and bounds stale extrapolatio
  assert(sampleMotion(list,5000).x<=1.72+1e-9);
  appendMotion(list,{at:150,x:9,z:9,yaw:0});assert.equal(list.length,2);
  for(let i=3;i<100;i++)appendMotion(list,{at:i*100,x:i,z:0,yaw:0});assert.equal(list.length,8);
+});
+test('Authoritative headshots agree with the actual Three.js camera pitch for every class',()=>{
+ for(const [kind,scale] of [['walker',1],['runner',.92],['brute',1.58]]){
+  const {room,a}=setup();room.enemies.clear();room.waveQueue=[];
+  const p=room.players.get(a.playerId);p.x=0;p.z=0;p.yaw=0;p.pitch=Math.atan2(2.02*scale-1.72,10);
+  const direction=new Vector3(0,0,-1).applyEuler(new Euler(p.pitch,p.yaw,0,'YXZ'));
+  assert(direction.y>0,'Upward camera aim must travel upward');
+  const e=room.spawnEnemy(kind);e.x=0;e.z=-10;
+  const shot=room.fire(a.playerId);assert(shot.ok);assert(shot.hits.some(hit=>hit.id===e.id&&hit.head),kind+' headshot');
+ }
 });
 test('Browser launch sends resume token and ignores events from replaced sockets',()=>{
  const sent=[],received=[];let retries=0;

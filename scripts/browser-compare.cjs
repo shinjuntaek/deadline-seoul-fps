@@ -13,7 +13,7 @@ const out=path.resolve('browser-qa');fs.mkdirSync(out,{recursive:true});
    code=code.replace('const ultraLow=softwareGPU||cores<=2;','const ultraLow=false;').replace("let quality=ultraLow?'low':settings.quality;","let quality='medium';");
    code=code.replace('function frame(){',`let compareFrozen=false;
 window.__DEADLINE_COMPARE__=()=>{
- startRun();clearRun();spawnQueue=[];waveIndex=0;stats.wave=1;nextWave=-1;settings.quality='medium';renderScale=1;resize();
+ if(phase==='playing')resetRun();else startRun();clearRun();spawnQueue=[];waveIndex=0;stats.wave=1;nextWave=-1;settings.quality='medium';renderScale=1;resize();
  camera.position.set(0,PLAYER.height,24);yaw=0;pitch=-.04;camera.rotation.set(pitch,yaw,0,'YXZ');
  for(const [kind,x,z] of [['walker',-2,17],['runner',2.1,15],['walker',-.3,10],['runner',-4,6],['walker',4,4]])createEnemy(kind,new THREE.Vector3(x,0,z));
  for(let i=0;i<20;i++){for(const z of enemies)updateEnemy(z,.05);if(typeof humanFrame==='function')humanFrame(.05)}

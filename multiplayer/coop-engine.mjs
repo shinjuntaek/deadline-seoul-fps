@@ -183,18 +183,18 @@ export class CoopRoom {
   if(p.ammo[p.weapon]<=0)return{ok:false,error:'EMPTY'};
   p.lastShot=now;p.ammo[p.weapon]--;p.shots++;
   const yaw=p.yaw,pitch=p.pitch;
-  const dx=-Math.sin(yaw)*Math.cos(pitch),dy=-Math.sin(pitch),dz=-Math.cos(yaw)*Math.cos(pitch);
+  const dx=-Math.sin(yaw)*Math.cos(pitch),dy=Math.sin(pitch),dz=-Math.cos(yaw)*Math.cos(pitch);
   const hits=[],pellets=cfg.pellets;
   for(let i=0;i<pellets;i++){
    const jitter=pellets===1?0:(this.rng()-.5)*.13;
    const a=yaw+jitter,b=pitch+(pellets===1?0:(this.rng()-.5)*.11);
-   const dirX=pellets===1?dx:-Math.sin(a)*Math.cos(b),dirY=pellets===1?dy:-Math.sin(b),dirZ=pellets===1?dz:-Math.cos(a)*Math.cos(b);
+   const dirX=pellets===1?dx:-Math.sin(a)*Math.cos(b),dirY=pellets===1?dy:Math.sin(b),dirZ=pellets===1?dz:-Math.cos(a)*Math.cos(b);
    let best=null,bestD=Infinity,headshot=false;
    for(const e of this.enemies.values()){
     if(e.dead)continue;
     const pp=ENEMY_PROFILE[e.kind],radius=pp.radius;
     const origin={x:p.x,y:1.72,z:p.z};
-    const hd=e.kind==='brute'?3.59:1.99,scale=e.kind==='brute'?1.58:e.kind==='runner'?.92:1;
+    const scale=e.kind==='brute'?1.58:e.kind==='runner'?.92:1,hd=2.02*scale;
     const head=raySphere(origin,dirX,dirY,dirZ,e.x,hd,e.z,radius*.69,cfg.range);
     const body=raySphere(origin,dirX,dirY,dirZ,e.x,1.18*scale,e.z,radius*1.37,cfg.range);
     const dist=Math.min(head,body);

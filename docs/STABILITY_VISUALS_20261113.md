@@ -65,9 +65,7 @@ rain-streaked concrete, worn olive tactical fabric and scratched gunmetal;
 photographic diffuse texture, no objects/logos/text, flat lighting. The generated
 atlas was cropped/resized/compressed for runtime use. No external game art was copied.
 
-Existing BBANANA zombie cutouts remain in use. They are **not fully rigged 3D
-characters**, and this candidate is not claimed to match Left 4 Dead fidelity.
-New animated anatomical character meshes are the next visual gate.
+Two CC0 MakeHuman-derived skinned infected models now replace photographic cutouts after loading. Each has 37 joints, about 10.5–10.9k near triangles and 2.1–2.2k far triangles, with two material primitives. A curved anatomical hand mesh replaces the viewmodel boxes. Existing BBANANA cutouts remain a loading/error fallback. This candidate is not claimed to match Left 4 Dead fidelity. See assets/licenses/MODEL_SOURCES.md for provenance and procedural animation limitations.
 
 Plugin discovery connected fal (3D assets); Railway (persistent
 co-op host) is still awaiting account connection. Existing
@@ -86,3 +84,5 @@ read-only camera diagnostics and a level-view browser assertion cover this case.
 An actual 160 ms mouse press also exposed an input loss when a slow rendered
 frame missed the entire held interval. Mouse-down now fires immediately through
 the existing cooldown-checked shooting path, matching the touch control.
+
+A server ray-direction audit found the pitch sign opposite to the actual Three.js YXZ camera. The server now follows positive-up camera pitch, with class-scaled head height. A real Three.js direction test covers headshots against walker, runner and brute. This is a confirmed aiming bug, not an identified cause of browser process termination.
