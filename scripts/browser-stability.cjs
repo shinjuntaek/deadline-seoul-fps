@@ -50,12 +50,14 @@ const check=(name,condition,detail)=>{report.steps.push({name,pass:!!condition,d
   // Dedicated visual QA exercises medium shaders under software GL, without
   // treating these settings or timings as a real GPU performance result.
   await host.goto(base+'?qa=visual');await host.locator('#start').waitFor({timeout:60000});
-  await host.locator('#start').click();await host.waitForTimeout(3500);
+  // CDP click coordinates retained from the menu can emit repeat warps after
+  // pointer lock; keyboard activation verifies start orientation independently.
+  await host.mouse.move(0,0);await host.locator('#start').focus();await host.keyboard.press('Enter');await host.waitForTimeout(3500);
   await host.screenshot({path:path.join(output,'seoul-medium-visual-qa.png')});
   report.visual=await host.evaluate(()=>window.__DEADLINE_PERFORMANCE__());
   report.visualMouse=await host.evaluate(()=>window.__qaMouse);
   check('Medium lighting/material path renders',report.visual.quality==='medium');
-  check('Starting without look input keeps the camera level',Math.abs(report.visual.view.pitch)<.05,report.visual.view);
+  check('Keyboard start without look input keeps the camera level',Math.abs(report.visual.view.pitch)<.05,report.visual.view);
   check('No unhandled JavaScript errors after medium render',report.errors.length===0,report.errors);
   report.status='PASS';
  }catch(error){report.status='FAIL';report.failure=error.stack;for(const context of browser.contexts())for(const page of context.pages()){report.failureState=await page.evaluate(()=>({game:window.__DEADLINE_PERFORMANCE__?.().samples.at(-1),coop:window.__DEADLINE_COOP_STATUS__?.()})).catch(()=>null);await page.screenshot({path:path.join(output,'stability-failure.png')}).catch(()=>{});}throw error}
