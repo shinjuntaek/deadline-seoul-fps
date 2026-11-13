@@ -45,7 +45,8 @@ function coopDisconnect(){
  for(const g of coop.teammates.values())coopDisposeTeammate(g);
  coop.teammates.clear();
  coop.active=false;coop.ended=false;coop.playerId=null;coop.token=null;
- coop.roomInfo=null;coop.lastState=null;
+ coop.roomInfo=null;coop.lastState=null;coop.needsReconnect=false;coop.code=null;
+ if(coop.lobby){coop.lobby.querySelector('#coop-joinform').classList.remove('hidden');coop.lobby.querySelector('#coop-share').classList.add('hidden')}
  const rev=document.getElementById('coop-revive');if(rev)rev.classList.add('hidden');
  const status=document.getElementById('coop-topline');if(status)status.classList.add('hidden');
 }
@@ -71,7 +72,7 @@ function coopLaunch(action){
  coopMsg('실시간 협동 서버에 연결하는 중...');
  const ws=new WebSocket(coopURL());
  coop.ws=ws;
- ws.onopen=()=>{coopSocketSend({t:action,name:coopName(),code,resumeToken:null})};
+ ws.onopen=()=>{coopSocketSend({t:action,name:coopName(),code,mode:coop.lobby.querySelector('#coop-mode')?.value||'survival',resumeToken:coop.needsReconnect?coop.token:null})};
  ws.onmessage=(ev)=>{
   let m;try{m=JSON.parse(ev.data)}catch{return}
   coopReceive(m);
@@ -82,7 +83,7 @@ function coopLaunch(action){
   if(wasActive){
    coop.active=false;coop.needsReconnect=true;
    coopMsg('서버 연결이 끊겼습니다. 네트워크와 룸 서버 상태를 확인해 주세요.');
-   coopOpenPanel();
+   coopOpenPanel();coop.lobby.querySelector('#coop-joinform').classList.remove('hidden');coop.lobby.querySelector('#coop-share').classList.add('hidden');
    phase='paused';fireHeld=false;
   }else if(!coop.playerId)coopMsg('연결이 종료되었습니다. 방 코드를 확인하거나 다시 연결해 주세요.');
  };
@@ -197,7 +198,7 @@ function coopMakeTeammate(p){
 }
 function coopDisposeTeammate(group){
  scene.remove(group);
- group.traverse(o=>{if(o.geometry)o.geometry.dispose();if(o.material){
+ group.traverse(o=>{if(o.geometry&&!o.isSprite)o.geometry.dispose();if(o.material){
   if(o.material.map)o.material.map.dispose();o.material.dispose()
  }});
 }

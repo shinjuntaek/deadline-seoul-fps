@@ -1,0 +1,43 @@
+name: Seoul escape campaign browser QA
+on:
+  push:
+    branches: [feat/seoul-escape-campaign-20261113]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: campaign-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  campaign-browser:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: |
+          npm install --ignore-scripts --no-audit
+          npm install --no-save playwright@1.56.1 --no-audit --ignore-scripts
+          npx playwright install --with-deps chromium
+      - run: npm run build
+      - name: Start game and actual WebSocket server
+        run: |
+          node scripts/coop-dev-server.mjs > /tmp/campaign-server.log 2>&1 &
+          for n in $(seq 1 30); do curl -fsS http://127.0.0.1:4173/ > /dev/null && exit 0; sleep 1; done
+          exit 1
+      - name: Campaign traversal, combat, checkpoints, mobile and two clients
+        run: node scripts/browser-campaign.cjs
+      - name: Legacy two-client survival regression
+        run: node scripts/browser-coop.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: seoul-campaign-evidence
+          path: |
+            browser-qa/
+            dist/static-qa-report.json
+            dist/qa-report.json

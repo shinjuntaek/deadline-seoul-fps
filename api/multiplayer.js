@@ -79,15 +79,16 @@ wss.on('connection',(ws,req)=>{
    if(!code||!validRoomCode(code)){send(ws,{t:'error',code:'INVALID_CODE'});return}
    if(isCreate){
     if(sessions.size>=60){send(ws,{t:'error',code:'SERVER_BUSY'});return}
-    room=new CoopRoom(code);sessions.set(code,room);
+    room=new CoopRoom(code,{mode:msg.mode});sessions.set(code,room);
    }else room=sessions.get(code);
    if(!room){send(ws,{t:'error',code:'ROOM_NOT_FOUND',hint:'The preview may route to a different function instance. A durable room backend is required for public release.'});return}
    const result=room.add(clientId,msg.name,m=>send(ws,m),msg.resumeToken);
    if(!result.ok){send(ws,{t:'error',code:result.error});return}
    playerId=result.playerId;
    clearTimeout(helloTimeout);
-   send(ws,{t:'joined',code,playerId,token:result.token,resumed:result.resumed,instanceId});
+   send(ws,{t:'joined',code,playerId,token:result.token,resumed:result.resumed,mode:room.mode,instanceId});
    room.broadcastLobby();
+   if(result.resumed)send(ws,{t:'resume',mode:room.mode,state:room.snapshot()});
    ensureTimer();
    return;
   }
