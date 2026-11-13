@@ -1,6 +1,6 @@
 /* Controlled in-engine comparison: same camera, medium quality, five enemies,
    seeded world and one simulated second. Simulation pauses for the capture. */
-const {chromium}=require('playwright'),fs=require('node:fs'),path=require('node:path');
+const {chromium}=require('playwright'),fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
 const out=path.resolve('browser-qa');fs.mkdirSync(out,{recursive:true});
 (async()=>{
  const browser=await chromium.launch({headless:true,args:['--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader','--ignore-gpu-blocklist']});
@@ -21,7 +21,8 @@ window.__DEADLINE_COMPARE__=()=>{
  dom['wave-banner'].classList.remove('show');dom['letterbox'].classList.remove('active');dom['center-message'].textContent='';
  compareFrozen=true;return{camera:camera.position.toArray(),yaw,pitch,quality,renderScale,enemies:enemies.map(z=>({kind:z.kind,position:z.group.position.toArray()}))};
 };
-function frame(){`);
+window.__DEADLINE_COMPARE_VIEW__=()=>({position:camera.position.toArray(),pitch:camera.rotation.x,yaw:camera.rotation.y});
+function frame(){if(compareFrozen){yaw=0;pitch=-.04;camera.position.set(0,PLAYER.height,24);camera.rotation.set(pitch,yaw,0,'YXZ');}`);
    code=code.replace('dt=Math.min(rawDt,.05)','dt=compareFrozen?0:Math.min(rawDt,.05)').replace('const dt=Math.min(clock.getDelta(),.05)','const dt=compareFrozen?0:Math.min(clock.getDelta(),.05)');
    await route.fulfill({response,body:code});
   });
@@ -29,7 +30,8 @@ function frame(){`);
   if(label==='after')await page.waitForFunction(()=>window.__DEADLINE_ZOMBIE_ART__?.().assetsReady,null,{timeout:90000});
   await page.locator('#start').click();const state=await page.evaluate(()=>window.__DEADLINE_COMPARE__());
   await page.waitForTimeout(4000);await page.screenshot({path:path.join(out,'combat-'+label+'-same-camera.png')});
-  states.push({label,...state,method:'Fixed in-engine comparison, simulation paused after 20 × 50 ms, not a performance sample'});await context.close();
+  const actualView=await page.evaluate(()=>window.__DEADLINE_COMPARE_VIEW__());assert(Math.abs(actualView.pitch+.04)<.01&&Math.abs(actualView.yaw)<.01,'Comparison camera stayed fixed');
+  states.push({label,...state,actualView,method:'Fixed in-engine comparison, simulation paused after 20 × 50 ms, not a performance sample'});await context.close();
  }
  fs.writeFileSync(path.join(out,'comparison-conditions.json'),JSON.stringify(states,null,2));await browser.close();
 })().catch(e=>{console.error(e);process.exitCode=1});
